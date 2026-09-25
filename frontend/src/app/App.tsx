@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import {
   Activity, ArrowRight, ArrowLeft, User, ClipboardList, Stethoscope, Clock, ShieldCheck, Clipboard, Phone, Building2, Check, CheckCircle2, Users, AlertTriangle, Lock, Mail, Play, StopCircle, SkipForward, AlertCircle, Timer, BarChart2, CalendarDays, Trash2, X, Bell, UserMinus
 } from "lucide-react";
@@ -69,16 +70,47 @@ async function setLocalData(key: string, value: string) {
 /* ═══════════════════════════════════════════════════════════
    NAVBAR (shared across all pages)
    ═══════════════════════════════════════════════════════════ */
-function Navbar({ onLogoClick }: { onLogoClick: () => void }) {
+function Navbar({ onLogoClick, isDark, onNavigate }: { onLogoClick: () => void, isDark?: boolean, onNavigate?: (p: string) => void }) {
   return (
-    <nav className="flex items-center justify-between px-8 py-5 max-w-7xl mx-auto">
+    <nav className="flex items-center justify-between px-8 py-5 max-w-7xl mx-auto w-full relative z-50">
       <button onClick={onLogoClick} className="flex items-center gap-2.5 cursor-pointer">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#004b87] to-[#00a651] flex items-center justify-center text-white font-bold text-lg shadow-lg">
-          M
-        </div>
-        <span className="text-xl font-bold tracking-tight text-[#004b87]">MediQueue</span>
+        <img src="/logo.png" alt="MediQueue Logo" className="w-9 h-9 object-contain rounded-lg bg-black" />
+        <span className={`text-xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-[#004b87]'}`}>MediQueue</span>
       </button>
 
+      {isDark && (
+        <div className="hidden md:flex items-center gap-8 text-sm font-medium text-slate-300">
+          <a 
+            href="#problem" 
+            onClick={(e) => { e.preventDefault(); document.getElementById('problem')?.scrollIntoView({ behavior: 'smooth' }); }}
+            className="hover:text-[#00e599] transition-colors cursor-pointer"
+          >
+            Problem
+          </a>
+          <a 
+            href="#pipeline" 
+            onClick={(e) => { e.preventDefault(); document.getElementById('pipeline')?.scrollIntoView({ behavior: 'smooth' }); }}
+            className="hover:text-[#00e599] transition-colors cursor-pointer"
+          >
+            Pipeline
+          </a>
+          <a 
+            href="#pipeline" 
+            onClick={(e) => { e.preventDefault(); document.getElementById('pipeline')?.scrollIntoView({ behavior: 'smooth' }); }}
+            className="hover:text-[#00e599] transition-colors cursor-pointer"
+          >
+            About Us
+          </a>
+        </div>
+      )}
+
+      {isDark ? (
+        <button onClick={() => onNavigate && onNavigate("patient-login")} className="bg-[#00e599] hover:bg-[#00c985] text-black font-semibold text-sm px-6 py-2.5 rounded-full transition-all cursor-pointer">
+          Get Started
+        </button>
+      ) : (
+        <div />
+      )}
     </nav>
   );
 }
@@ -86,120 +118,231 @@ function Navbar({ onLogoClick }: { onLogoClick: () => void }) {
 /* ═══════════════════════════════════════════════════════════
    PAGE 1: LANDING PAGE
    ═══════════════════════════════════════════════════════════ */
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: { staggerChildren: 0.2, delayChildren: 0.1 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: { type: "spring", stiffness: 100, damping: 20, mass: 1 } 
+  },
+};
+
 function LandingPage({ onNavigate }: { onNavigate: (page: string) => void }) {
   return (
-    <>
-      <main className="max-w-7xl mx-auto px-8 w-full mt-12 md:mt-24 mb-32">
+    <div className="bg-black min-h-screen text-white pb-32 overflow-hidden relative">
+      {/* Background Light Grey Checkered Grid */}
+      <div 
+        className="absolute inset-0 pointer-events-none z-0" 
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+        }}
+      />
+
+      <main className="max-w-7xl mx-auto px-8 w-full pt-20 relative z-10">
+        
         {/* Hero */}
-        <section className="flex flex-col items-center text-center max-w-4xl mx-auto mb-32 relative">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[600px] bg-[#004b87]/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-          <div className="absolute top-0 right-0 w-[400px] h-[400px] bg-[#00a651]/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+        <motion.section 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="flex flex-col items-center text-center max-w-5xl mx-auto mb-40 relative mt-16"
+        >
+          <motion.div variants={itemVariants} className="relative inline-flex flex-col items-center mb-10">
+            {/* Predictive with Animated Underline */}
+            <div className="relative inline-block">
+              <h1 className="text-6xl md:text-[6rem] font-extrabold tracking-tight text-white mb-3 text-center leading-none">
+                Predictive
+              </h1>
 
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-slate-100 shadow-[0_4px_15px_rgba(0,0,0,0.05)] text-sm font-medium text-slate-600 mb-8">
-            <span className="relative flex h-3 w-3">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#00a651] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-3 w-3 bg-[#00a651]"></span>
-            </span>
-            Live Status: Operational
-          </div>
+              {/* Animated Underline for Predictive */}
+              <div className="relative w-full h-[3px] overflow-hidden rounded-full flex items-center">
+                {/* Subtle base track */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#00e599]/30 to-transparent"></div>
 
-          <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight text-slate-900 mb-8 leading-[1.1]">
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#004b87] to-[#0073cc]">Smart</span> Queue Management
-          </h1>
-          <p className="text-lg md:text-xl text-slate-500 mb-10 max-w-2xl leading-relaxed">
-            Eliminate waiting room chaos. Our intelligent routing and prediction system brings seamless patient flow to modern healthcare facilities.
-          </p>
-        </section>
-
-        {/* Cards */}
-        <section className="grid md:grid-cols-3 gap-8 mb-40 relative z-10">
-          {/* Patient Login */}
-          <div
-            onClick={() => onNavigate("patient-login")}
-            className="group bg-white rounded-3xl p-8 border border-white transition-all duration-500 hover:-translate-y-3 cursor-pointer shadow-[0_10px_40px_-5px_rgba(0,0,0,0.05)] hover:shadow-[0_25px_50px_-10px_rgba(0,75,135,0.15)] hover:border-[#004b87]/10 flex flex-col items-start relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50 rounded-bl-full -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150 z-0"></div>
-            <div className="w-16 h-16 rounded-2xl bg-blue-50 flex items-center justify-center mb-8 relative z-10 shadow-sm border border-blue-100">
-              <User className="w-8 h-8 text-[#0073cc]" />
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-3 relative z-10">Patient Login</h3>
-            <p className="text-slate-500 mb-6 font-medium relative z-10">Book & Track</p>
-            <p className="text-slate-600 mb-8 leading-relaxed relative z-10 hidden md:block">
-              Empower patients with live queue updates, estimated wait times, and easy mobile check-ins.
-            </p>
-            <div className="mt-auto flex items-center text-[#0073cc] font-semibold relative z-10 group-hover:gap-2 transition-all">
-              <span>Enter Portal</span>
-              <ArrowRight className="w-4 h-4 ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-            </div>
-          </div>
-
-          {/* Staff Login */}
-          <div
-            onClick={() => onNavigate("staff-login")}
-            className="group bg-white rounded-3xl p-8 border border-slate-100 transition-all duration-500 hover:-translate-y-3 cursor-pointer shadow-[0_10px_40px_-5px_rgba(0,0,0,0.05)] hover:shadow-[0_25px_50px_-10px_rgba(0,166,81,0.15)] flex flex-col items-start relative overflow-hidden md:-mt-8"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-green-50 rounded-bl-full -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150 z-0"></div>
-            <div className="w-16 h-16 rounded-2xl bg-[#00a651]/10 flex items-center justify-center mb-8 relative z-10 shadow-sm border border-[#00a651]/20">
-              <ClipboardList className="w-8 h-8 text-[#00a651]" />
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-3 relative z-10">Receptionist Login</h3>
-            <p className="text-slate-500 mb-6 font-medium relative z-10">Register Walk-ins</p>
-            <p className="text-slate-600 mb-8 leading-relaxed relative z-10 hidden md:block">
-              Rapid intake workflows for frontline staff to seamlessly add walk-in patients into the prediction algorithm.
-            </p>
-            <div className="mt-auto flex items-center text-[#00a651] font-semibold relative z-10 group-hover:gap-2 transition-all">
-              <span>View Tools</span>
-              <ArrowRight className="w-4 h-4 ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-            </div>
-          </div>
-
-          {/* Doctor Dashboard */}
-          <div
-            onClick={() => onNavigate("doctor-login")}
-            className="group bg-white rounded-3xl p-8 border border-white transition-all duration-500 hover:-translate-y-3 cursor-pointer shadow-[0_10px_40px_-5px_rgba(0,0,0,0.05)] hover:shadow-[0_25px_50px_-10px_rgba(0,35,85,0.15)] hover:border-[#002355]/10 flex flex-col items-start relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150 z-0"></div>
-            <div className="w-16 h-16 rounded-2xl bg-[#002b5e]/5 flex items-center justify-center mb-8 relative z-10 shadow-sm border border-[#002b5e]/10">
-              <Stethoscope className="w-8 h-8 text-[#002b5e]" />
-            </div>
-            <h3 className="text-2xl font-bold text-slate-900 mb-3 relative z-10">Doctor Dashboard</h3>
-            <p className="text-slate-500 mb-6 font-medium relative z-10">Manage Queue</p>
-            <p className="text-slate-600 mb-8 leading-relaxed relative z-10 hidden md:block">
-              A bird's-eye view of your waiting room, enabling clinicians to prioritize urgent cases intuitively.
-            </p>
-            <div className="mt-auto flex items-center text-[#002b5e] font-semibold relative z-10 group-hover:gap-2 transition-all">
-              <span>See Dashboard</span>
-              <ArrowRight className="w-4 h-4 ml-1 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300" />
-            </div>
-          </div>
-        </section>
-
-        {/* How it Works */}
-        <section className="py-20 flex flex-col items-center">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-slate-900 mb-4">How it Works</h2>
-            <p className="text-slate-500 text-lg max-w-xl mx-auto">Three simple steps to transform your clinic's patient experience.</p>
-          </div>
-          <div className="flex flex-col md:flex-row gap-8 items-center justify-center w-full max-w-5xl relative">
-            <div className="hidden md:block absolute top-[60px] left-[15%] right-[15%] h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent -z-10"></div>
-            {[
-              { icon: Clipboard, title: "Register", desc: "Patients book online or check-in at the front desk kiosks in seconds.", color: "#004b87", num: 1 },
-              { icon: Activity, title: "Predict", desc: "Our AI algorithm calculates live exact wait times and notifies patients automatically.", color: "#00a651", num: 2 },
-              { icon: ShieldCheck, title: "Consult", desc: "Doctors see patient info via the dashboard, ensuring a targeted and prompt consultation.", color: "#002b5e", num: 3 },
-            ].map((s) => (
-              <div key={s.num} className="flex flex-col items-center text-center max-w-xs relative bg-white p-6 rounded-3xl transition-transform hover:-translate-y-2 z-10">
-                <div className="w-20 h-20 rounded-2xl bg-white shadow-[0_10px_30px_rgba(0,0,0,0.08)] flex items-center justify-center mb-6 border border-slate-50 relative">
-                  <div className="absolute -top-3 -right-3 w-8 h-8 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-md" style={{ backgroundColor: s.color }}>{s.num}</div>
-                  <s.icon className="w-10 h-10" style={{ color: s.color }} />
-                </div>
-                <h4 className="text-xl font-bold text-slate-900 mb-2">{s.title}</h4>
-                <p className="text-slate-500 text-sm leading-relaxed">{s.desc}</p>
+                {/* Animated moving beam across the underline */}
+                <motion.div
+                  animate={{
+                    x: ["-100%", "100%"],
+                  }}
+                  transition={{
+                    duration: 2.5,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                  }}
+                  className="absolute w-1/2 h-full bg-gradient-to-r from-transparent via-[#00e599] to-transparent shadow-[0_0_8px_#00e599]"
+                />
               </div>
+            </div>
+
+            {/* Queue Management */}
+            <h2 className="text-5xl md:text-[5.5rem] font-bold relative z-10 text-center leading-none mt-4 text-transparent bg-clip-text bg-gradient-to-r from-[#00e599] via-[#a3f0d2] to-[#ffffff]" style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', paddingBottom: '10px' }}>
+              Queue Management
+            </h2>
+          </motion.div>
+
+          <motion.p variants={itemVariants} className="text-lg md:text-xl text-slate-400 max-w-2xl leading-relaxed relative z-10">
+            Eliminate waiting room chaos. Our predictive routing engine delivers seamless, enterprise-grade patient flow to modern healthcare facilities.
+          </motion.p>
+        </motion.section>
+
+        {/* The Challenge (Problem Statement) */}
+        <motion.section 
+          id="problem"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8, type: "spring", bounce: 0.3 }}
+          className="flex flex-col lg:flex-row gap-16 mb-40 relative z-10 items-center scroll-mt-28"
+        >
+          <div className="flex-1 lg:pr-10">
+            <motion.div 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.2 }}
+              className="flex items-center gap-2 text-[#00e599] font-bold text-xs tracking-widest uppercase mb-6"
+            >
+              <Clock className="w-4 h-4" /> The Challenge
+            </motion.div>
+            <motion.h2 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.3 }}
+              className="text-4xl md:text-[2.75rem] font-bold text-white mb-6 leading-[1.2]"
+            >
+              Inefficient Scheduling &<br />
+              <span className="text-slate-400" style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', fontWeight: 'normal' }}>Unpredictable Delays</span>
+            </motion.h2>
+            <motion.p 
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.4 }}
+              className="text-slate-400 text-lg mb-10 leading-relaxed max-w-xl"
+            >
+              Patients routinely face long, agonizing wait times due to archaic scheduling systems and unforeseen clinical hold-ups.
+            </motion.p>
+            <motion.div 
+              initial={{ opacity: 0, scaleY: 0 }}
+              whileInView={{ opacity: 1, scaleY: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.5, originY: 0 }}
+              className="pl-6 border-l-2 border-[#00e599]"
+            >
+              <p className="text-slate-300 text-lg leading-relaxed max-w-xl">
+                Our objective is to develop a smart system that dynamically manages appointments, predicts wait times, and optimizes doctor schedules.
+              </p>
+            </motion.div>
+          </div>
+          
+          <div className="flex-1 flex flex-col gap-5 w-full">
+            {[
+              { icon: User, title: "Smart Booking Interface", desc: "Seamless web and mobile platforms designed for intuitive patient appointment scheduling." },
+              { icon: Activity, title: "Real-Time Queue Prediction", desc: "AI-driven models calculating accurate wait times dynamically based on live clinic data." },
+              { icon: Bell, title: "Dynamic Rescheduling", desc: "Automated delay notifications and intelligent slot reallocation to prevent bottlenecks." },
+              { icon: Users, title: "Staff Management Dashboard", desc: "Comprehensive mission-control tools for hospital staff to oversee and adjust scheduling slots." },
+            ].map((feature, i) => (
+              <motion.div 
+                key={feature.title} 
+                initial={{ opacity: 0, x: 30 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 + (i * 0.15), type: "spring" }}
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                className="bg-[#0f1115] border border-slate-800/60 rounded-2xl p-6 flex items-start gap-5 transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_20px_rgba(0,229,153,0.15)] group"
+              >
+                <div className="w-12 h-12 rounded-full bg-slate-900 flex items-center justify-center shrink-0 border border-slate-800 group-hover:border-[#00e599]/50 transition-colors">
+                  <feature.icon className="w-5 h-5 text-slate-400 group-hover:text-[#00e599] transition-colors" />
+                </div>
+                <div>
+                  <h4 className="text-white font-bold text-lg mb-2">{feature.title}</h4>
+                  <p className="text-slate-400 text-sm leading-relaxed">{feature.desc}</p>
+                </div>
+              </motion.div>
             ))}
           </div>
-        </section>
+        </motion.section>
+
+        {/* How it Works (Pipeline) */}
+        <motion.section 
+          id="pipeline"
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, margin: "-100px" }}
+          transition={{ duration: 0.8 }}
+          className="flex flex-col items-center pt-24 border-t border-slate-800/50 relative z-10 scroll-mt-28"
+        >
+          <div className="text-center mb-20">
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-6">
+              How it <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00e599] via-[#a3f0d2] to-[#ffffff]" style={{ fontFamily: 'Georgia, serif', fontStyle: 'italic', paddingBottom: '5px' }}>Works</span>
+            </h2>
+            <p className="text-slate-400 text-lg max-w-xl mx-auto">
+              A specialized three-step flow engineered to eliminate medical administrative friction.
+            </p>
+          </div>
+          <div className="grid md:grid-cols-3 gap-8 w-full relative max-w-5xl mx-auto">
+            {/* horizontal line */}
+            <motion.div 
+              initial={{ scaleX: 0 }}
+              whileInView={{ scaleX: 1 }}
+              viewport={{ once: true }}
+              transition={{ delay: 0.5, duration: 1 }}
+              className="hidden md:block absolute top-[40px] left-[15%] right-[15%] h-px bg-[#00e599]/40 -z-10 origin-left"
+            ></motion.div>
+            
+            {[
+              { icon: Clipboard, title: "Register", desc: "Patients book online or check-in at the front desk kiosks in seconds.", num: 1 },
+              { icon: Activity, title: "Predict", desc: "Our AI algorithm calculates live exact wait times and notifies patients automatically.", num: 2 },
+              { icon: ShieldCheck, title: "Consult", desc: "Doctors see patient info via the dashboard, ensuring a targeted and prompt consultation.", num: 3 },
+            ].map((step, i) => (
+              <motion.div 
+                key={step.title} 
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: 0.2 + (i * 0.2), type: "spring", bounce: 0.4 }}
+                whileHover={{ y: -10, transition: { duration: 0.2 } }}
+                className="bg-[#0f1115] border border-slate-800/60 rounded-[2rem] p-10 flex flex-col items-center text-center relative z-10 transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_30px_rgba(0,229,153,0.15)] group"
+              >
+                <div className="relative mb-10">
+                  <motion.div 
+                    whileHover={{ rotate: [0, -10, 10, 0], transition: { duration: 0.5 } }}
+                    className="w-20 h-20 bg-slate-900 rounded-[1.5rem] flex items-center justify-center border border-slate-800 group-hover:border-[#00e599]/50 transition-colors"
+                  >
+                    <step.icon className="w-8 h-8 text-slate-400 group-hover:text-[#00e599] transition-colors" />
+                  </motion.div>
+                  <motion.div 
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.5 + (i * 0.2), type: "spring", bounce: 0.6 }}
+                    className="absolute -top-3 -right-3 w-8 h-8 bg-[#00e599] text-black font-bold text-sm rounded-full flex items-center justify-center shadow-lg shadow-[#00e599]/40"
+                  >
+                    {step.num}
+                  </motion.div>
+                </div>
+                <h4 className="text-white font-bold text-2xl mb-4">{step.title}</h4>
+                <p className="text-slate-400 text-sm leading-relaxed">{step.desc}</p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
       </main>
-    </>
+    </div>
   );
 }
 
@@ -1939,15 +2082,15 @@ function PatientDashboard({ phone, onNew, onTrack, onCancel, onReschedule, onLog
 /* ═══════════════════════════════════════════════════════════
    FOOTER
    ═══════════════════════════════════════════════════════════ */
-function Footer() {
+function Footer({ isDark }: { isDark?: boolean }) {
   return (
-    <footer className="border-t border-slate-100 bg-white py-8 mt-auto">
-      <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center text-slate-400 text-xs">
+    <footer className={`border-t py-8 mt-auto ${isDark ? 'border-slate-900 bg-black' : 'border-slate-100 bg-white'}`}>
+      <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center text-xs">
         <div className="flex items-center gap-2 mb-3 md:mb-0">
-          <div className="w-5 h-5 rounded bg-slate-300 flex items-center justify-center text-white font-bold text-[10px]">M</div>
-          <span className="font-semibold text-slate-500">MediQueue</span>
+          <img src="/logo.png" alt="MediQueue Logo" className="w-5 h-5 object-contain rounded bg-black" />
+          <span className={`font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>MediQueue</span>
         </div>
-        <p>© 2026 MediQueue Inc. All rights reserved.</p>
+        <p className={isDark ? 'text-slate-500' : 'text-slate-400'}>© 2026 MediQueue Inc. All rights reserved.</p>
       </div>
     </footer>
   );
@@ -2039,8 +2182,8 @@ export default function App() {
   };
 
   return (
-    <div className={`min-h-screen ${page === 'management-dashboard' ? 'bg-[#f4f7fb]' : 'bg-[#f8f9fc]'} font-sans selection:bg-[#004b87] selection:text-white flex flex-col`}>
-      {page !== "management-dashboard" && <Navbar onLogoClick={goHome} />}
+    <div className={`min-h-screen ${page === 'landing' ? 'bg-black text-white' : page === 'management-dashboard' ? 'bg-[#f4f7fb]' : 'bg-[#f8f9fc]'} font-sans ${page === 'landing' ? 'selection:bg-[#00e599] selection:text-black' : 'selection:bg-[#004b87] selection:text-white'} flex flex-col`}>
+      {page !== "management-dashboard" && <Navbar onLogoClick={goHome} isDark={page === 'landing'} onNavigate={(p) => setPage(p as any)} />}
 
       {page === "landing" && <LandingPage onNavigate={(p) => setPage(p as any)} />}
       {page === "patient-login" && <PatientLoginPage onLogin={(phone) => { setCurrentUserPhone(phone); setPage("patient-dashboard"); }} onBack={goHome} />}
@@ -2055,7 +2198,7 @@ export default function App() {
       {page === "doctor-login" && <DoctorLoginPage onLogin={() => setPage("doctor-dashboard")} onBack={goHome} />}
       {page === "doctor-dashboard" && <DoctorDashboard onBack={goHome} />}
 
-      {page !== "management-dashboard" && <Footer />}
+      {page !== "management-dashboard" && <Footer isDark={page === 'landing'} />}
 
       {/* Global Modals */}
       {reschedulingAppointment && (

@@ -3,7 +3,7 @@ import {
   Activity, ArrowRight, ArrowLeft, User, ClipboardList, Stethoscope, Clock, ShieldCheck, Clipboard, Phone, Building2, Check, CheckCircle2, Users, AlertTriangle, Lock, Mail, Play, StopCircle, SkipForward, AlertCircle, Timer, BarChart2, CalendarDays, Trash2, X, Bell, UserMinus
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { sendRealSMS } from './twilio';
+import { sendRealSMS } from '../services/twilio';
 /* ═══════════════════════════════════════════════════════════
    MOCK DATA & LOCAL STORAGE
    ═══════════════════════════════════════════════════════════ */
@@ -26,7 +26,7 @@ const INIT_QUEUE = [
   { id: '105', name: 'Vikram Singh', type: 'Walk-in', scheduled: '3:00 PM', status: 'Waiting' },
 ];
 
-import { supabase } from "./supabase";
+import { supabase } from "../services/supabase";
 
 function initializeData() {
   if (!localStorage.getItem('hospital_queue')) {

@@ -198,6 +198,75 @@ function LandingPage({ onNavigate }: { onNavigate: (page: string) => void }) {
           </motion.p>
         </motion.section>
 
+        {/* Login Panels */}
+        <motion.section 
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.8 }}
+          className="grid md:grid-cols-3 gap-6 mb-40 relative z-10"
+        >
+          {/* Patient Login */}
+          <motion.div
+            whileHover={{ y: -6, transition: { duration: 0.2 } }}
+            onClick={() => onNavigate("patient-login")}
+            className="bg-[#0b0d12] border border-slate-800/80 rounded-2xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_25px_rgba(0,229,153,0.12)] group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6 group-hover:border-[#00e599]/50 transition-colors">
+              <User className="w-5 h-5 text-slate-400 group-hover:text-[#00e599] transition-colors" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-1.5">Patient Login</h3>
+            <p className="text-xs font-bold text-[#00e599] tracking-wider uppercase mb-5">BOOK & TRACK</p>
+            <p className="text-slate-400 text-sm leading-relaxed mb-8 flex-1">
+              Empower patients with live queue updates, estimated wait times, and easy mobile check-ins.
+            </p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-300 group-hover:text-[#00e599] transition-colors">
+              <span>Enter Portal</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </div>
+          </motion.div>
+
+          {/* Receptionist Login */}
+          <motion.div
+            whileHover={{ y: -6, transition: { duration: 0.2 } }}
+            onClick={() => onNavigate("staff-login")}
+            className="bg-[#0b0d12] border border-slate-800/80 rounded-2xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_25px_rgba(0,229,153,0.12)] group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6 group-hover:border-[#00e599]/50 transition-colors">
+              <ClipboardList className="w-5 h-5 text-slate-400 group-hover:text-[#00e599] transition-colors" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-1.5">Receptionist Login</h3>
+            <p className="text-xs font-bold text-[#00e599] tracking-wider uppercase mb-5">REGISTER WALK-INS</p>
+            <p className="text-slate-400 text-sm leading-relaxed mb-8 flex-1">
+              Rapid intake workflows for frontline staff to seamlessly add walk-in patients into the prediction algorithm.
+            </p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-300 group-hover:text-[#00e599] transition-colors">
+              <span>View Tools</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </div>
+          </motion.div>
+
+          {/* Doctor Dashboard */}
+          <motion.div
+            whileHover={{ y: -6, transition: { duration: 0.2 } }}
+            onClick={() => onNavigate("doctor-login")}
+            className="bg-[#0b0d12] border border-slate-800/80 rounded-2xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_25px_rgba(0,229,153,0.12)] group"
+          >
+            <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6 group-hover:border-[#00e599]/50 transition-colors">
+              <Stethoscope className="w-5 h-5 text-slate-400 group-hover:text-[#00e599] transition-colors" />
+            </div>
+            <h3 className="text-xl font-bold text-white mb-1.5">Doctor Dashboard</h3>
+            <p className="text-xs font-bold text-[#00e599] tracking-wider uppercase mb-5">MANAGE QUEUE</p>
+            <p className="text-slate-400 text-sm leading-relaxed mb-8 flex-1">
+              A bird's-eye view of your waiting room, enabling clinicians to prioritize urgent cases intuitively.
+            </p>
+            <div className="flex items-center gap-2 text-sm font-semibold text-slate-300 group-hover:text-[#00e599] transition-colors">
+              <span>See Dashboard</span>
+              <ArrowRight className="w-4 h-4 transition-transform group-hover:translate-x-1" />
+            </div>
+          </motion.div>
+        </motion.section>
+
         {/* The Challenge (Problem Statement) */}
         <motion.section 
           id="problem"
@@ -372,20 +441,20 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (val: string
 
   return (
     <div className="relative flex">
-      <div className="absolute left-0 top-0 bottom-0 flex items-center pr-2 border-r border-slate-200 bg-slate-50/50 rounded-l-xl z-10 w-[105px]">
+      <div className="absolute left-0 top-0 bottom-0 flex items-center pr-2 border-r border-slate-800 bg-slate-900/80 rounded-l-xl z-10 w-[105px]">
         <select
           value={countryCode}
           onChange={(e) => setCountryCode(e.target.value)}
-          className="w-full h-full pl-3 pr-6 py-3.5 bg-transparent text-sm text-slate-800 font-semibold focus:outline-none appearance-none cursor-pointer"
+          className="w-full h-full pl-3 pr-6 py-3.5 bg-slate-900 text-sm text-slate-200 font-semibold focus:outline-none appearance-none cursor-pointer"
           style={{
-            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
+            backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2394a3b8' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`,
             backgroundPosition: "right 0.2rem center",
             backgroundRepeat: "no-repeat",
             backgroundSize: "1.2em 1.2em",
           }}
         >
           {COUNTRY_CODES.map((c) => (
-            <option key={c.code} value={c.code}>
+            <option key={c.code} value={c.code} className="bg-slate-900 text-white">
               {c.country} ({c.code})
             </option>
           ))}
@@ -396,7 +465,7 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (val: string
         placeholder="98765 43210"
         value={number}
         onChange={(e) => setNumber(e.target.value)}
-        className="w-full pl-[7.2rem] pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 focus:border-[#004b87] transition-all"
+        className="w-full pl-[7.2rem] pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all"
       />
     </div>
   );
@@ -447,42 +516,50 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
   };
 
   return (
-    <main className="max-w-7xl mx-auto px-8 flex items-center justify-center" style={{ minHeight: "calc(100vh - 180px)" }}>
-      <div className="relative w-full max-w-md">
-        {/* Decorative blobs */}
-        <div className="absolute -top-20 -left-20 w-60 h-60 bg-[#004b87]/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
-        <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-[#00a651]/5 rounded-full blur-3xl -z-10 pointer-events-none"></div>
+    <main className="max-w-7xl mx-auto px-8 flex flex-col items-center justify-center flex-1 py-16 relative z-10" style={{ minHeight: "calc(100vh - 180px)" }}>
+      {/* Background Light Grey Checkered Grid */}
+      <div 
+        className="absolute inset-0 pointer-events-none -z-10" 
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+        }}
+      />
 
-        <div className="bg-white rounded-2xl p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100/80">
+      <div className="relative w-full max-w-md">
+        <div className="bg-[#0b0d12] rounded-3xl p-10 shadow-2xl border border-slate-800/80 relative overflow-hidden">
           {/* Header */}
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#004b87] to-[#0073cc] flex items-center justify-center shadow-md">
-              <User className="w-6 h-6 text-white" />
+          <div className="flex items-center gap-3.5 mb-2">
+            <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-md">
+              <User className="w-6 h-6 text-[#00e599]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Patient Login</h2>
-              <p className="text-sm text-slate-400">
+              <h2 className="text-xl font-bold text-white">Patient Login</h2>
+              <p className="text-xs text-slate-400 mt-0.5">
                 {step === "phone" ? "Access your queue & appointments" : "We've sent a code to your phone"}
               </p>
             </div>
           </div>
 
-          <div className="w-full h-px bg-slate-100 my-6"></div>
+          <div className="w-full h-px bg-slate-800/80 my-6"></div>
 
           {step === "phone" ? (
             <div className="space-y-5">
               <div>
-                <label className="block text-sm font-semibold text-slate-600 mb-2">Phone Number</label>
+                <label className="block text-sm font-semibold text-slate-300 mb-2">Phone Number</label>
                 <PhoneInput value={phone} onChange={(val) => { setPhone(val); setErrorMsg(""); }} />
-                {errorMsg && <p className="text-red-500 text-xs font-semibold mt-2 text-center">{errorMsg}</p>}
+                {errorMsg && <p className="text-red-400 text-xs font-semibold mt-2 text-center">{errorMsg}</p>}
               </div>
 
               <button
                 onClick={handleSendOtp}
                 disabled={!isPhoneValid || isLoading}
-                className={`w-full mt-6 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 ${isPhoneValid
-                  ? "bg-[#004b87] text-white shadow-[0_10px_30px_rgba(0,75,135,0.25)] hover:shadow-[0_15px_40px_rgba(0,75,135,0.35)] hover:-translate-y-0.5 cursor-pointer"
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                className={`w-full mt-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${isPhoneValid
+                  ? "bg-[#00e599] text-black shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:bg-[#00c985] hover:-translate-y-0.5 cursor-pointer"
+                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
                   }`}
               >
                 {isLoading ? "Sending..." : "Send OTP"}
@@ -493,29 +570,29 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
             <div className="space-y-5">
               <div>
                 <div className="flex justify-between items-end mb-2">
-                  <label className="block text-sm font-semibold text-slate-600">6-Digit OTP</label>
-                  <button onClick={() => setStep("phone")} className="text-xs text-[#004b87] font-semibold hover:underline cursor-pointer">Change Number</button>
+                  <label className="block text-sm font-semibold text-slate-300">6-Digit OTP</label>
+                  <button onClick={() => setStep("phone")} className="text-xs text-[#00e599] font-semibold hover:underline cursor-pointer">Change Number</button>
                 </div>
                 <div className="relative">
-                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
                     type="text"
                     maxLength={6}
                     placeholder="Enter 6-digit code"
                     value={otp}
                     onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '')); setErrorMsg(""); }}
-                    className={`w-full pl-11 pr-4 py-3.5 rounded-xl border ${errorMsg ? 'border-red-400 ring-2 ring-red-400/20' : 'border-slate-200'} bg-slate-50/50 text-sm text-slate-800 tracking-widest placeholder:tracking-normal placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 focus:border-[#004b87] transition-all text-center`}
+                    className={`w-full pl-11 pr-4 py-3.5 rounded-xl border ${errorMsg ? 'border-red-500 ring-2 ring-red-500/20' : 'border-slate-800'} bg-[#131720] text-sm text-white tracking-widest placeholder:tracking-normal placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all text-center`}
                   />
-                  {errorMsg && <p className="text-red-500 text-xs font-semibold mt-2 absolute -bottom-6 w-full text-center">{errorMsg}</p>}
+                  {errorMsg && <p className="text-red-400 text-xs font-semibold mt-2 absolute -bottom-6 w-full text-center">{errorMsg}</p>}
                 </div>
               </div>
 
               <button
                 onClick={handleVerifyOtp}
                 disabled={!isOtpValid || isLoading}
-                className={`w-full mt-6 py-4 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 ${isOtpValid
-                  ? "bg-[#00a651] text-white shadow-[0_10px_30px_rgba(0,166,81,0.25)] hover:shadow-[0_15px_40px_rgba(0,166,81,0.35)] hover:-translate-y-0.5 cursor-pointer"
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                className={`w-full mt-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${isOtpValid
+                  ? "bg-[#00e599] text-black shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:bg-[#00c985] hover:-translate-y-0.5 cursor-pointer"
+                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
                   }`}
               >
                 {isLoading ? "Verifying..." : "Verify & Login"}
@@ -523,7 +600,7 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
               </button>
 
               <div className="text-center mt-4">
-                <button className="text-xs text-slate-500 font-medium hover:text-[#004b87] transition-colors cursor-pointer">
+                <button className="text-xs text-slate-400 font-medium hover:text-[#00e599] transition-colors cursor-pointer">
                   Resend OTP
                 </button>
               </div>
@@ -533,7 +610,7 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
           {step === "phone" && (
             <p className="text-center text-sm text-slate-400 mt-6">
               New patient?{" "}
-              <button onClick={() => onLogin(phone)} className="text-[#00a651] font-semibold hover:underline cursor-pointer">
+              <button onClick={() => onLogin(phone)} className="text-[#00e599] font-semibold hover:underline cursor-pointer">
                 Register here
               </button>
             </p>
@@ -542,7 +619,7 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
 
         {/* Back to home */}
         <div className="flex justify-center mt-6">
-          <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-500 font-semibold hover:text-[#004b87] transition-colors cursor-pointer">
+          <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-400 font-semibold hover:text-[#00e599] transition-colors cursor-pointer">
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </button>
@@ -1015,53 +1092,62 @@ function StaffLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () =
   };
 
   return (
-    <main className="w-full flex-1 flex flex-col items-center justify-center py-16 px-4 relative">
-      {/* Subtle Geometric Background */}
-      <div className="absolute inset-0 pointer-events-none opacity-[0.03]" style={{ backgroundImage: 'radial-gradient(#004b87 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
+    <main className="w-full flex-1 flex flex-col items-center justify-center py-16 px-4 relative z-10" style={{ minHeight: "calc(100vh - 180px)" }}>
+      {/* Background Light Grey Checkered Grid */}
+      <div 
+        className="absolute inset-0 pointer-events-none -z-10" 
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+        }}
+      />
 
-      <div className="w-full max-w-lg bg-white rounded-[2rem] p-12 shadow-2xl border border-slate-100 relative z-10 transition-all duration-500 hover:shadow-[0_30px_60px_-15px_rgba(0,75,135,0.15)]">
+      <div className="w-full max-w-lg bg-[#0b0d12] rounded-3xl p-10 md:p-12 shadow-2xl border border-slate-800/80 relative z-10 transition-all duration-500 hover:shadow-[0_0_40px_rgba(0,229,153,0.12)]">
 
-        <div className="flex flex-col items-center justify-center text-center mb-10">
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 flex items-center justify-center mb-6 shadow-sm border border-emerald-100/50">
-            <Building2 className="w-10 h-10 text-[#00a651]" />
+        <div className="flex flex-col items-center justify-center text-center mb-8">
+          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-5 shadow-sm">
+            <Building2 className="w-8 h-8 text-[#00e599]" />
           </div>
-          <h1 className="text-3xl font-extrabold text-[#004b87] tracking-tight mb-2">Receptionist Portal</h1>
-          <p className="text-slate-500 font-medium">Hospital ER System Sign-in</p>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-1.5">Receptionist Portal</h1>
+          <p className="text-slate-400 text-sm font-medium">Hospital ER System Sign-in</p>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 shadow-sm animate-in fade-in zoom-in duration-300">
-            <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-            <p className="text-sm font-bold text-red-700">{error}</p>
+          <div className="mb-6 p-4 rounded-xl bg-red-950/40 border border-red-800/60 flex items-center gap-3 shadow-sm animate-in fade-in zoom-in duration-300">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-sm font-bold text-red-300">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           <div className="space-y-1.5">
-            <label className="text-sm font-bold text-slate-700 ml-1">Staff ID / Email</label>
+            <label className="text-sm font-semibold text-slate-300 ml-1">Staff ID / Email</label>
             <div className="relative">
-              <ClipboardList className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <ClipboardList className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
                 type="text"
                 placeholder="e.g. reception"
                 value={staffId}
                 onChange={(e) => setStaffId(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 focus:border-[#004b87] transition-all font-medium"
+                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-sm"
                 required
               />
             </div>
           </div>
 
-          <div className="space-y-1.5 mb-8">
-            <label className="text-sm font-bold text-slate-700 ml-1">Password</label>
+          <div className="space-y-1.5 mb-6">
+            <label className="text-sm font-semibold text-slate-300 ml-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
               <input
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 focus:border-[#004b87] transition-all font-medium tracking-widest"
+                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium tracking-widest text-sm"
                 required
               />
             </div>
@@ -1069,21 +1155,21 @@ function StaffLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () =
 
           <button
             type="submit"
-            className="w-full py-4 mt-6 rounded-full bg-[#00a651] text-white font-extrabold text-lg hover:bg-emerald-600 transition-all shadow-[0_10px_30px_-5px_rgba(0,166,81,0.4)] hover:shadow-[0_15px_40px_-5px_rgba(0,166,81,0.5)] hover:-translate-y-1"
+            className="w-full py-4 mt-4 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-base transition-all shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:-translate-y-0.5 cursor-pointer"
           >
             Enter Portal
           </button>
         </form>
 
-        <div className="mt-10 pt-8 border-t border-slate-100 text-center">
-          <p className="text-xs text-slate-400 font-medium leading-relaxed max-w-[250px] mx-auto">
+        <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
+          <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-[280px] mx-auto">
             Access is restricted to authorized personnel. Session activity is strictly logged.
           </p>
         </div>
       </div>
 
-      <div className="flex justify-center mt-8 relative z-10">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-500 font-semibold hover:text-[#004b87] transition-colors cursor-pointer bg-white px-6 py-2 rounded-full shadow-sm border border-slate-100">
+      <div className="flex justify-center mt-6 relative z-10">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-400 font-semibold hover:text-[#00e599] transition-colors cursor-pointer">
           <ArrowLeft className="w-4 h-4" /> Return to Directory
         </button>
       </div>
@@ -1109,63 +1195,72 @@ function DoctorLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () 
   };
 
   return (
-    <main className="max-w-md mx-auto px-8 pt-16 pb-20 w-full flex-1">
-      <div className="bg-white rounded-3xl p-10 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.1)] border border-slate-100 relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-32 h-32 bg-[#004b87]/5 rounded-bl-full z-0 flex pointer-events-none"></div>
-        <div className="relative z-10">
-          <div className="w-16 h-16 rounded-2xl bg-[#004b87]/10 flex items-center justify-center mb-8">
-            <Stethoscope className="w-8 h-8 text-[#004b87]" />
-          </div>
-          <h1 className="text-3xl font-bold text-slate-900 mb-2 tracking-tight">Doctor Portal</h1>
-          <p className="text-slate-500 mb-8">Secure login for medical staff</p>
+    <main className="w-full flex-1 flex flex-col items-center justify-center py-16 px-4 relative z-10" style={{ minHeight: "calc(100vh - 180px)" }}>
+      {/* Background Light Grey Checkered Grid */}
+      <div 
+        className="absolute inset-0 pointer-events-none -z-10" 
+        style={{
+          backgroundImage: `
+            linear-gradient(to right, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+            linear-gradient(to bottom, rgba(255, 255, 255, 0.08) 1px, transparent 1px)
+          `,
+          backgroundSize: '48px 48px',
+        }}
+      />
 
-          {error && (
-            <div className="mb-6 p-4 rounded-xl bg-red-50 border border-red-200 flex items-center gap-3 shadow-sm animate-in fade-in zoom-in duration-300">
-              <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
-              <p className="text-sm font-bold text-red-700">{error}</p>
-            </div>
-          )}
-
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Doctor ID / Email</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  placeholder="e.g. DR-10294"
-                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/20 focus:border-[#004b87] transition-all font-medium"
-                  value={doctorId}
-                  onChange={(e) => setDoctorId(e.target.value)}
-                  autoFocus
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-2">Secure PIN</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="password"
-                  placeholder="••••••"
-                  className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/20 focus:border-[#004b87] transition-all font-medium tracking-widest"
-                  value={pin}
-                  onChange={(e) => setPin(e.target.value)}
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              className="w-full py-4 rounded-xl bg-[#004b87] text-white font-bold text-lg hover:bg-[#003a6c] transition-colors shadow-[0_10px_30px_rgba(0,75,135,0.2)]"
-            >
-              Access Dashboard
-            </button>
-          </form>
+      <div className="w-full max-w-md bg-[#0b0d12] rounded-3xl p-10 shadow-2xl border border-slate-800/80 relative z-10 transition-all duration-500 hover:shadow-[0_0_40px_rgba(0,229,153,0.12)]">
+        <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6">
+          <Stethoscope className="w-7 h-7 text-[#00e599]" />
         </div>
+        <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Doctor Portal</h1>
+        <p className="text-slate-400 text-sm mb-6">Secure login for medical staff</p>
+
+        {error && (
+          <div className="mb-6 p-4 rounded-xl bg-red-950/40 border border-red-800/60 flex items-center gap-3 shadow-sm animate-in fade-in zoom-in duration-300">
+            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
+            <p className="text-sm font-bold text-red-300">{error}</p>
+          </div>
+        )}
+
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Doctor ID / Email</label>
+            <div className="relative">
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <input
+                type="text"
+                placeholder="e.g. DR-10294"
+                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-sm"
+                value={doctorId}
+                onChange={(e) => setDoctorId(e.target.value)}
+                autoFocus
+              />
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold text-slate-300 mb-2">Secure PIN</label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <input
+                type="password"
+                placeholder="••••••"
+                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium tracking-widest text-sm"
+                value={pin}
+                onChange={(e) => setPin(e.target.value)}
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            className="w-full py-4 mt-2 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-base transition-all shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:-translate-y-0.5 cursor-pointer"
+          >
+            Access Dashboard
+          </button>
+        </form>
       </div>
 
-      <div className="flex justify-center mt-8">
-        <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-500 font-semibold hover:text-[#004b87] transition-colors cursor-pointer">
+      <div className="flex justify-center mt-6">
+        <button onClick={onBack} className="flex items-center gap-2 text-sm text-slate-400 font-semibold hover:text-[#00e599] transition-colors cursor-pointer">
           <ArrowLeft className="w-4 h-4" /> Back to Home
         </button>
       </div>
@@ -2181,9 +2276,11 @@ export default function App() {
     try { await supabase.from('hospital_queue').update({ scheduled: newTime }).eq('id', id); } catch (e) { }
   };
 
+  const isDarkPage = ['landing', 'patient-login', 'staff-login', 'doctor-login'].includes(page);
+
   return (
-    <div className={`min-h-screen ${page === 'landing' ? 'bg-black text-white' : page === 'management-dashboard' ? 'bg-[#f4f7fb]' : 'bg-[#f8f9fc]'} font-sans ${page === 'landing' ? 'selection:bg-[#00e599] selection:text-black' : 'selection:bg-[#004b87] selection:text-white'} flex flex-col`}>
-      {page !== "management-dashboard" && <Navbar onLogoClick={goHome} isDark={page === 'landing'} onNavigate={(p) => setPage(p as any)} />}
+    <div className={`min-h-screen ${isDarkPage ? 'bg-black text-white' : page === 'management-dashboard' ? 'bg-[#f4f7fb]' : 'bg-[#f8f9fc]'} font-sans ${isDarkPage ? 'selection:bg-[#00e599] selection:text-black' : 'selection:bg-[#004b87] selection:text-white'} flex flex-col`}>
+      {page !== "management-dashboard" && <Navbar onLogoClick={goHome} isDark={isDarkPage} onNavigate={(p) => setPage(p as any)} />}
 
       {page === "landing" && <LandingPage onNavigate={(p) => setPage(p as any)} />}
       {page === "patient-login" && <PatientLoginPage onLogin={(phone) => { setCurrentUserPhone(phone); setPage("patient-dashboard"); }} onBack={goHome} />}
@@ -2198,7 +2295,7 @@ export default function App() {
       {page === "doctor-login" && <DoctorLoginPage onLogin={() => setPage("doctor-dashboard")} onBack={goHome} />}
       {page === "doctor-dashboard" && <DoctorDashboard onBack={goHome} />}
 
-      {page !== "management-dashboard" && <Footer isDark={page === 'landing'} />}
+      {page !== "management-dashboard" && <Footer isDark={isDarkPage} />}
 
       {/* Global Modals */}
       {reschedulingAppointment && (

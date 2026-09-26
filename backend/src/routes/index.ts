@@ -1,8 +1,8 @@
 import { Router } from 'express';
-import queueRoutes from './queue.routes';
+import walkInRoutes from './walkInRoutes';
 
 const router = Router();
 
-router.use('/', queueRoutes);
+router.use('/', walkInRoutes);
 
 export default router;

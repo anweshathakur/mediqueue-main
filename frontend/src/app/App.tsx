@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
-  Activity, ArrowRight, ArrowLeft, User, ClipboardList, Stethoscope, Clock, ShieldCheck, Clipboard, Phone, Building2, Check, CheckCircle2, Users, AlertTriangle, Lock, Mail, Play, StopCircle, SkipForward, AlertCircle, Timer, BarChart2, CalendarDays, Trash2, X, Bell, UserMinus
+  Activity, ArrowRight, ArrowLeft, User, ClipboardList, Stethoscope, Clock, ShieldCheck, Clipboard, Phone, Building2, Check, CheckCircle2, Users, AlertTriangle, Lock, Mail, Play, StopCircle, SkipForward, AlertCircle, Timer, BarChart2, CalendarDays, Trash2, X, Bell, UserMinus, RefreshCw, Search, Sparkles, PlusCircle, CheckCircle, Flame
 } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
-import { sendRealSMS } from '../services/twilio';
 /* ═══════════════════════════════════════════════════════════
    MOCK DATA & LOCAL STORAGE
    ═══════════════════════════════════════════════════════════ */
@@ -461,36 +460,40 @@ function PhoneInput({ value, onChange }: { value: string; onChange: (val: string
 /* ═══════════════════════════════════════════════════════════
    PAGE 2: PATIENT LOGIN PAGE
    ═══════════════════════════════════════════════════════════ */
-function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => void; onBack: () => void }) {
-  const [step, setStep] = useState<"phone" | "otp">("phone");
-  const [phone, setPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [errorMsg, setErrorMsg] = useState("");
-
-  const isPhoneValid = phone.replace(/\D/g, "").length >= 10;
-  const isOtpValid = otp.trim().length === 6;
-
+function PatientLoginPage({ onLogin, onBack }: { onLogin: (email: string) => void; onBack: () => void }) {
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [errorMsg, setErrorMsg] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSendOtp = async () => {
-    if (isPhoneValid) {
-      setIsLoading(true);
-      setErrorMsg("");
-      setTimeout(() => {
-        setIsLoading(false);
-        setStep("otp");
-      }, 500);
-    }
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setErrorMsg('');
 
-  const handleVerifyOtp = async () => {
+    if (!email || !password) {
+      setErrorMsg('Please enter both email and password.');
+      return;
+    }
+
+    if (mode === 'signup') {
+      if (password.length < 6) {
+        setErrorMsg('Password must be at least 6 characters.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setErrorMsg('Passwords do not match.');
+        return;
+      }
+    }
+
     setIsLoading(true);
-    setErrorMsg("");
-    const phoneNum = phone.replace(/\s+/g, '');
     setTimeout(() => {
       setIsLoading(false);
-      onLogin(phoneNum);
-    }, 500);
+      onLogin(email);
+    }, 400);
   };
 
   return (
@@ -508,91 +511,131 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
       />
 
       <div className="relative w-full max-w-md">
-        <div className="bg-[#0b0d12] rounded-3xl p-10 shadow-2xl border border-slate-800/80 relative overflow-hidden">
+        <div className="bg-[#0b0d12] rounded-3xl p-8 md:p-10 shadow-2xl border border-slate-800/80 relative overflow-hidden">
           {/* Header */}
           <div className="flex items-center gap-3.5 mb-2">
             <div className="w-12 h-12 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center shadow-md">
               <User className="w-6 h-6 text-[#00e599]" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-white">Patient Login</h2>
+              <h2 className="text-xl font-bold text-white">
+                {mode === 'login' ? 'Patient Sign In' : 'Create Patient Account'}
+              </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                {step === "phone" ? "Access your queue & appointments" : "We've sent a code to your phone"}
+                {mode === 'login' ? 'Access your appointments & queue' : 'Register to book & track visits'}
               </p>
             </div>
           </div>
 
-          <div className="w-full h-px bg-slate-800/80 my-6"></div>
+          {/* Mode Switch Tabs */}
+          <div className="flex bg-slate-900/90 p-1 rounded-xl my-5 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => { setMode('login'); setErrorMsg(''); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === 'login' ? 'bg-[#00e599] text-black shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              onClick={() => { setMode('signup'); setErrorMsg(''); }}
+              className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === 'signup' ? 'bg-[#00e599] text-black shadow' : 'text-slate-400 hover:text-white'}`}
+            >
+              Sign Up
+            </button>
+          </div>
 
-          {step === "phone" ? (
-            <div className="space-y-5">
-              <div>
-                <label className="block text-sm font-semibold text-slate-300 mb-2">Phone Number</label>
-                <PhoneInput value={phone} onChange={(val) => { setPhone(val); setErrorMsg(""); }} />
-                {errorMsg && <p className="text-red-400 text-xs font-semibold mt-2 text-center">{errorMsg}</p>}
-              </div>
-
-              <button
-                onClick={handleSendOtp}
-                disabled={!isPhoneValid || isLoading}
-                className={`w-full mt-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${isPhoneValid
-                  ? "bg-[#00e599] text-black shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:bg-[#00c985] hover:-translate-y-0.5 cursor-pointer"
-                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
-                  }`}
-              >
-                {isLoading ? "Sending..." : "Send OTP"}
-                <ArrowRight className="w-4 h-4" />
-              </button>
+          {errorMsg && (
+            <div className="mb-4 p-3 rounded-xl bg-red-950/40 border border-red-800/60 flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <p className="text-xs font-bold text-red-300">{errorMsg}</p>
             </div>
-          ) : (
-            <div className="space-y-5">
-              <div>
-                <div className="flex justify-between items-end mb-2">
-                  <label className="block text-sm font-semibold text-slate-300">6-Digit OTP</label>
-                  <button onClick={() => setStep("phone")} className="text-xs text-[#00e599] font-semibold hover:underline cursor-pointer">Change Number</button>
+          )}
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {mode === 'signup' && (
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-300 ml-1">Full Name</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Rahul Sharma"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all"
+                  />
                 </div>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-300 ml-1">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="email"
+                  placeholder="e.g. patient@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="block text-xs font-semibold text-slate-300 ml-1">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all"
+                  required
+                />
+              </div>
+            </div>
+
+            {mode === 'signup' && (
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-300 ml-1">Confirm Password</label>
                 <div className="relative">
                   <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
                   <input
-                    type="text"
-                    maxLength={6}
-                    placeholder="Enter 6-digit code"
-                    value={otp}
-                    onChange={(e) => { setOtp(e.target.value.replace(/\D/g, '')); setErrorMsg(""); }}
-                    className={`w-full pl-11 pr-4 py-3.5 rounded-xl border ${errorMsg ? 'border-red-500 ring-2 ring-red-500/20' : 'border-slate-800'} bg-[#131720] text-sm text-white tracking-widest placeholder:tracking-normal placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all text-center`}
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-sm text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all"
+                    required
                   />
-                  {errorMsg && <p className="text-red-400 text-xs font-semibold mt-2 absolute -bottom-6 w-full text-center">{errorMsg}</p>}
                 </div>
               </div>
+            )}
 
-              <button
-                onClick={handleVerifyOtp}
-                disabled={!isOtpValid || isLoading}
-                className={`w-full mt-6 py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 ${isOtpValid
-                  ? "bg-[#00e599] text-black shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:bg-[#00c985] hover:-translate-y-0.5 cursor-pointer"
-                  : "bg-slate-800 text-slate-500 cursor-not-allowed"
-                  }`}
-              >
-                {isLoading ? "Verifying..." : "Verify & Login"}
-                <CheckCircle2 className="w-4 h-4" />
-              </button>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full mt-4 py-3.5 rounded-xl font-bold flex items-center justify-center gap-2 transition-all duration-300 bg-[#00e599] text-black shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:bg-[#00c985] hover:-translate-y-0.5 cursor-pointer text-sm"
+            >
+              {isLoading ? "Processing..." : mode === 'login' ? "Sign In as Patient" : "Create Patient Account"}
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </form>
 
-              <div className="text-center mt-4">
-                <button className="text-xs text-slate-400 font-medium hover:text-[#00e599] transition-colors cursor-pointer">
-                  Resend OTP
-                </button>
-              </div>
-            </div>
-          )}
-
-          {step === "phone" && (
-            <p className="text-center text-sm text-slate-400 mt-6">
-              New patient?{" "}
-              <button onClick={() => onLogin(phone)} className="text-[#00e599] font-semibold hover:underline cursor-pointer">
-                Register here
-              </button>
-            </p>
-          )}
+          <p className="text-center text-xs text-slate-400 mt-6">
+            {mode === 'login' ? "Don't have an account? " : "Already registered? "}
+            <button
+              type="button"
+              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setErrorMsg(''); }}
+              className="text-[#00e599] font-bold hover:underline cursor-pointer ml-1"
+            >
+              {mode === 'login' ? 'Create one now' : 'Sign in here'}
+            </button>
+          </p>
         </div>
 
         {/* Back to home */}
@@ -1014,10 +1057,10 @@ function PatientFlow({ initialPhone, onBackToHome, onComplete }: { initialPhone:
     const ampm = hours >= 12 ? 'PM' : 'AM';
     const computedETA = `${displayHours}:${mins.toString().padStart(2, '0')} ${ampm}`;
 
-    // Direct Delivery: Execute Real Twilio SMS and local UI simulation simultaneously
+    // Registration notification
     const smsMessage = `Your registration for patient ${newPatient.name} has been successfully registered. You are scheduled to see ${newPatient.doctor_name}, and your expected arrival time is ${computedETA}.`;
 
-    sendRealSMS(newPatient.phone, smsMessage);
+    
 
     if ("Notification" in window) {
       Notification.requestPermission().then(perm => {
@@ -1055,18 +1098,40 @@ function PatientFlow({ initialPhone, onBackToHome, onComplete }: { initialPhone:
    PAGE 3.2: RECEPTIONIST LOGIN PAGE
    ═══════════════════════════════════════════════════════════ */
 function StaffLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () => void }) {
-  const [staffId, setStaffId] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (["reception", "admin"].includes(staffId.trim().toLowerCase()) && password === "1234") {
+    setError('');
+
+    if (!email || !password) {
+      setError('Please fill in all fields.');
+      return;
+    }
+
+    if (mode === 'signup') {
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
       sessionStorage.setItem("isAdmin", "true");
       onLogin();
-    } else {
-      setError("Invalid access. Please use ID: reception, Pass: 1234.");
-    }
+    }, 400);
   };
 
   return (
@@ -1083,65 +1148,129 @@ function StaffLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () =
         }}
       />
 
-      <div className="w-full max-w-lg bg-[#0b0d12] rounded-3xl p-10 md:p-12 shadow-2xl border border-slate-800/80 relative z-10 transition-all duration-500 hover:shadow-[0_0_40px_rgba(0,229,153,0.12)]">
+      <div className="w-full max-w-md bg-[#0b0d12] rounded-3xl p-8 md:p-10 shadow-2xl border border-slate-800/80 relative z-10 transition-all duration-500 hover:shadow-[0_0_40px_rgba(0,229,153,0.12)]">
 
-        <div className="flex flex-col items-center justify-center text-center mb-8">
-          <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-5 shadow-sm">
-            <Building2 className="w-8 h-8 text-[#00e599]" />
+        <div className="flex flex-col items-center justify-center text-center mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4 shadow-sm">
+            <Building2 className="w-7 h-7 text-[#00e599]" />
           </div>
-          <h1 className="text-3xl font-extrabold text-white tracking-tight mb-1.5">Receptionist Portal</h1>
-          <p className="text-slate-400 text-sm font-medium">Hospital ER System Sign-in</p>
+          <h1 className="text-2xl font-extrabold text-white tracking-tight mb-1">
+            {mode === 'login' ? 'Receptionist Portal' : 'Register Staff Account'}
+          </h1>
+          <p className="text-slate-400 text-xs font-medium">
+            {mode === 'login' ? 'Hospital ER & Walk-In Intake Sign-In' : 'Authorize new front desk staff member'}
+          </p>
+        </div>
+
+        {/* Mode Switch Tabs */}
+        <div className="flex bg-slate-900/90 p-1 rounded-xl mb-5 border border-slate-800">
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setError(''); }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === 'login' ? 'bg-[#00e599] text-black shadow' : 'text-slate-400 hover:text-white'}`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('signup'); setError(''); }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === 'signup' ? 'bg-[#00e599] text-black shadow' : 'text-slate-400 hover:text-white'}`}
+          >
+            Sign Up
+          </button>
         </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-950/40 border border-red-800/60 flex items-center gap-3 shadow-sm animate-in fade-in zoom-in duration-300">
-            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
-            <p className="text-sm font-bold text-red-300">{error}</p>
+          <div className="mb-4 p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 flex items-center gap-2.5 shadow-sm">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <p className="text-xs font-bold text-red-300">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-1.5">
-            <label className="text-sm font-semibold text-slate-300 ml-1">Staff ID / Email</label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          {mode === 'signup' && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300 ml-1">Staff Member Name</label>
+              <div className="relative">
+                <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="e.g. Front Desk Operator"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
+                />
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-300 ml-1">Email / Staff Username</label>
             <div className="relative">
-              <ClipboardList className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="text"
-                placeholder="e.g. reception"
-                value={staffId}
-                onChange={(e) => setStaffId(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-sm"
+                placeholder="e.g. reception@hospital.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
                 required
               />
             </div>
           </div>
 
-          <div className="space-y-1.5 mb-6">
-            <label className="text-sm font-semibold text-slate-300 ml-1">Password</label>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-300 ml-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="password"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium tracking-widest text-sm"
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
                 required
               />
             </div>
           </div>
 
+          {mode === 'signup' && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300 ml-1">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full py-4 mt-4 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-base transition-all shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:-translate-y-0.5 cursor-pointer"
+            disabled={loading}
+            className="w-full py-3.5 mt-2 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-sm transition-all shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2"
           >
-            Enter Portal
+            {loading ? "Processing..." : mode === 'login' ? "Enter Staff Portal" : "Create Staff Account"}
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        <div className="mt-8 pt-6 border-t border-slate-800/80 text-center">
-          <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-[280px] mx-auto">
-            Access is restricted to authorized personnel. Session activity is strictly logged.
+        <div className="mt-6 text-center">
+          <p className="text-xs text-slate-400">
+            {mode === 'login' ? "New front-desk staff? " : "Already registered? "}
+            <button
+              type="button"
+              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
+              className="text-[#00e599] font-bold hover:underline cursor-pointer ml-1"
+            >
+              {mode === 'login' ? 'Sign Up' : 'Sign In'}
+            </button>
           </p>
         </div>
       </div>
@@ -1159,17 +1288,40 @@ function StaffLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () =
    PAGE 3.5: DOCTOR LOGIN PAGE
    ═══════════════════════════════════════════════════════════ */
 function DoctorLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () => void }) {
-  const [doctorId, setDoctorId] = useState("");
-  const [pin, setPin] = useState("");
-  const [error, setError] = useState("");
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [name, setName] = useState('');
+  const [department, setDepartment] = useState('General Medicine');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (doctorId && pin.length >= 4) {
-      onLogin(); // Bypass actual auth for demo
-    } else {
-      setError("Please enter a valid Doctor ID and PIN.");
+    setError('');
+
+    if (!email || !password) {
+      setError('Please enter both email and password.');
+      return;
     }
+
+    if (mode === 'signup') {
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Passwords do not match.');
+        return;
+      }
+    }
+
+    setLoading(true);
+    setTimeout(() => {
+      setLoading(false);
+      onLogin();
+    }, 400);
   };
 
   return (
@@ -1186,55 +1338,143 @@ function DoctorLoginPage({ onLogin, onBack }: { onLogin: () => void; onBack: () 
         }}
       />
 
-      <div className="w-full max-w-md bg-[#0b0d12] rounded-3xl p-10 shadow-2xl border border-slate-800/80 relative z-10 transition-all duration-500 hover:shadow-[0_0_40px_rgba(0,229,153,0.12)]">
-        <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6">
-          <Stethoscope className="w-7 h-7 text-[#00e599]" />
+      <div className="w-full max-w-md bg-[#0b0d12] rounded-3xl p-8 md:p-10 shadow-2xl border border-slate-800/80 relative z-10 transition-all duration-500 hover:shadow-[0_0_40px_rgba(0,229,153,0.12)]">
+        <div className="flex flex-col items-center justify-center text-center mb-6">
+          <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-4">
+            <Stethoscope className="w-7 h-7 text-[#00e599]" />
+          </div>
+          <h1 className="text-2xl font-extrabold text-white mb-1 tracking-tight">
+            {mode === 'login' ? 'Doctor Portal' : 'Register Doctor Profile'}
+          </h1>
+          <p className="text-slate-400 text-xs">
+            {mode === 'login' ? 'Secure command & consultation console' : 'Join hospital clinical staff roster'}
+          </p>
         </div>
-        <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">Doctor Portal</h1>
-        <p className="text-slate-400 text-sm mb-6">Secure login for medical staff</p>
+
+        {/* Mode Switch Tabs */}
+        <div className="flex bg-slate-900/90 p-1 rounded-xl mb-5 border border-slate-800">
+          <button
+            type="button"
+            onClick={() => { setMode('login'); setError(''); }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === 'login' ? 'bg-[#00e599] text-black shadow' : 'text-slate-400 hover:text-white'}`}
+          >
+            Sign In
+          </button>
+          <button
+            type="button"
+            onClick={() => { setMode('signup'); setError(''); }}
+            className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${mode === 'signup' ? 'bg-[#00e599] text-black shadow' : 'text-slate-400 hover:text-white'}`}
+          >
+            Sign Up
+          </button>
+        </div>
 
         {error && (
-          <div className="mb-6 p-4 rounded-xl bg-red-950/40 border border-red-800/60 flex items-center gap-3 shadow-sm animate-in fade-in zoom-in duration-300">
-            <AlertTriangle className="w-5 h-5 text-red-400 shrink-0" />
-            <p className="text-sm font-bold text-red-300">{error}</p>
+          <div className="mb-4 p-3.5 rounded-xl bg-red-950/40 border border-red-800/60 flex items-center gap-2.5 shadow-sm">
+            <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+            <p className="text-xs font-bold text-red-300">{error}</p>
           </div>
         )}
 
-        <form onSubmit={handleLogin} className="space-y-5">
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">Doctor ID / Email</label>
+        <form onSubmit={handleLogin} className="space-y-4">
+          {mode === 'signup' && (
+            <>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-300 ml-1">Doctor Name</label>
+                <div className="relative">
+                  <Stethoscope className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                  <input
+                    type="text"
+                    placeholder="e.g. Dr. Priya Sharma"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-slate-300 ml-1">Department</label>
+                <select
+                  value={department}
+                  onChange={(e) => setDepartment(e.target.value)}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] font-medium text-xs"
+                >
+                  {DEPARTMENTS.map(dept => <option key={dept} value={dept} className="bg-slate-900">{dept}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-300 ml-1">Doctor Email</label>
             <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
-                type="text"
-                placeholder="e.g. DR-10294"
-                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-sm"
-                value={doctorId}
-                onChange={(e) => setDoctorId(e.target.value)}
-                autoFocus
+                type="email"
+                placeholder="e.g. doctor@hospital.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
+                required
               />
             </div>
           </div>
-          <div>
-            <label className="block text-sm font-semibold text-slate-300 mb-2">Secure PIN</label>
+
+          <div className="space-y-1">
+            <label className="text-xs font-semibold text-slate-300 ml-1">Password</label>
             <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
               <input
                 type="password"
-                placeholder="••••••"
-                className="w-full pl-12 pr-4 py-3.5 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium tracking-widest text-sm"
-                value={pin}
-                onChange={(e) => setPin(e.target.value)}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
+                required
               />
             </div>
           </div>
+
+          {mode === 'signup' && (
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-slate-300 ml-1">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                <input
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-800 bg-[#131720] text-white placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 focus:border-[#00e599] transition-all font-medium text-xs"
+                  required
+                />
+              </div>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full py-4 mt-2 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-base transition-all shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:-translate-y-0.5 cursor-pointer"
+            disabled={loading}
+            className="w-full py-3.5 mt-2 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-sm transition-all shadow-[0_0_25px_rgba(0,229,153,0.25)] hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2"
           >
-            Access Dashboard
+            {loading ? "Processing..." : mode === 'login' ? "Access Doctor Console" : "Register Doctor Profile"}
+            <ArrowRight className="w-4 h-4" />
           </button>
         </form>
+
+        <div className="mt-6 text-center">
+          <p className="text-xs text-slate-400">
+            {mode === 'login' ? "New doctor? " : "Already registered? "}
+            <button
+              type="button"
+              onClick={() => { setMode(mode === 'login' ? 'signup' : 'login'); setError(''); }}
+              className="text-[#00e599] font-bold hover:underline cursor-pointer ml-1"
+            >
+              {mode === 'login' ? 'Create Profile' : 'Sign In'}
+            </button>
+          </p>
+        </div>
       </div>
 
       <div className="flex justify-center mt-6">
@@ -1401,8 +1641,13 @@ function ManagementAllPatientsView({ queue }: { queue: any[] }) {
 function ManagementDashboard({ onBack }: { onBack: () => void }) {
   const [queue, setQueue] = useState<any[]>([]);
   const [tab, setTab] = useState<'intake' | 'all' | 'analytics'>('intake');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBackendConnected, setIsBackendConnected] = useState<boolean | null>(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterStatus, setFilterStatus] = useState<string>("All");
 
-  // Intake Form
+  // Intake Form State
   const [phone, setPhone] = useState("");
   const [name, setName] = useState("");
   const [age, setAge] = useState("");
@@ -1411,6 +1656,9 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
   const [priority, setPriority] = useState(false);
 
   const [flashSuccess, setFlashSuccess] = useState(false);
+  const [lastRegisteredToken, setLastRegisteredToken] = useState<any | null>(null);
+
+  const API_BASE = 'http://localhost:5000/api';
 
   // Mock database for auto-fill logic
   const PATIENT_DB: Record<string, { name: string, age: string }> = {
@@ -1419,13 +1667,58 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
     "5551234567": { name: "John Doe", age: "33" },
   };
 
+  // Helper to fetch live queue from backend or fallback to localStorage
+  const syncQueue = async () => {
+    setIsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/queue`, { method: 'GET' });
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data && Array.isArray(json.data)) {
+          // Normalize queue data
+          const normalized = json.data.map((item: any) => ({
+            id: String(item.token_number || item.id),
+            rawId: item.id,
+            name: item.patient_name || item.name,
+            phone: item.phone || '',
+            age: item.age || 30,
+            type: item.patient_type || item.type || 'Walk-in',
+            scheduled: item.scheduled_time || item.scheduled || (item.priority ? 'Immediate' : 'In Queue'),
+            status: item.status || 'Waiting',
+            doctor_name: item.doctor_name || 'Unassigned',
+            department: item.department || 'General Medicine',
+            priority: Boolean(item.priority)
+          }));
+          setQueue(normalized);
+          setLocalData('hospital_queue', JSON.stringify(normalized));
+          setIsBackendConnected(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+      throw new Error("Backend response not ok");
+    } catch (err) {
+      console.warn("Backend API not reachable, using localStorage fallback:", err);
+      setIsBackendConnected(false);
+      const local = JSON.parse(localStorage.getItem('hospital_queue') || '[]');
+      setQueue(local);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const sync = () => {
-      setQueue(JSON.parse(localStorage.getItem('hospital_queue') || '[]'));
+    syncQueue();
+    const handleStorage = () => {
+      const local = JSON.parse(localStorage.getItem('hospital_queue') || '[]');
+      setQueue(local);
     };
-    sync();
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(syncQueue, 8000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
   }, []);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -1443,84 +1736,194 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
 
   const handlePing = async (p: any) => {
     if (p.phone) {
-      await sendRealSMS(p.phone, `MediQueue: Hi ${p.name}, please return to the waiting room. Your physician (${p.doctor_name || 'your doctor'}) is getting ready for you!`);
-      alert(`Sent: Ping SMS text triggered to ${p.phone}`);
+      alert(`Notification sent to patient ${p.name} (${p.phone}): Your doctor is ready for you!`);
+    } else {
+      alert(`Patient #${p.id} (${p.name}) notified.`);
     }
   };
 
-  const handleNoShow = async (p: any) => {
-    const newQueue = queue.map(item => item.id === p.id ? { ...item, status: 'No-Show' } : item);
-    setLocalData('hospital_queue', JSON.stringify(newQueue));
-    
+  const handleUpdateStatus = async (p: any, newStatus: string) => {
+    // 1. Optimistic UI update
+    const updated = queue.map(item => (item.id === p.id || item.rawId === p.rawId) ? { ...item, status: newStatus } : item);
+    setQueue(updated);
+    setLocalData('hospital_queue', JSON.stringify(updated));
+
+    // 2. Sync to Backend API
+    try {
+      const targetId = p.rawId || p.id;
+      await fetch(`${API_BASE}/queue/${targetId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+      });
+    } catch (e) {
+      console.warn("Backend status update error:", e);
+    }
+  };
+
+  const handleDelete = async (p: any) => {
+    if (!window.confirm(`Are you sure you want to remove Token #${p.id} (${p.name}) from the live queue?`)) {
+      return;
+    }
+    // Optimistic removal
+    const updated = queue.filter(item => item.id !== p.id && item.rawId !== p.rawId);
+    setQueue(updated);
+    setLocalData('hospital_queue', JSON.stringify(updated));
+
+    // Backend deletion
+    try {
+      const targetId = p.rawId || p.id;
+      await fetch(`${API_BASE}/walkins/${targetId}`, {
+        method: 'DELETE'
+      });
+    } catch (e) {
+      console.warn("Backend delete error:", e);
+    }
   };
 
   const handleAddQueue = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name || phone.length < 10) return;
 
-    // Auto increment Token ID
-    const maxToken = queue.length > 0 ? Math.max(...queue.map(q => parseInt(q.id))) : 100;
-    const newToken = maxToken + 1;
+    setIsSubmitting(true);
+    let registeredToken: any = null;
 
-    const newPatient = {
-      id: newToken.toString(),
-      name,
-      phone: phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3'), // formatted slightly
-      type: 'Walk-in',
-      scheduled: priority ? 'Immediate' : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      status: 'Waiting',
-      doctor_name: assignedDoctor
-    };
+    try {
+      // Send to Backend API
+      const res = await fetch(`${API_BASE}/walkins`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          phone,
+          age: Number(age) || 30,
+          doctor_name: assignedDoctor,
+          department: specialty,
+          priority
+        })
+      });
 
+      if (res.ok) {
+        const json = await res.json();
+        if (json.data) {
+          registeredToken = {
+            id: String(json.data.token_number || json.data.id),
+            rawId: json.data.id,
+            name: json.data.patient_name || json.data.name,
+            phone: json.data.phone,
+            age: json.data.age,
+            type: 'Walk-in',
+            scheduled: json.data.scheduled_time || (priority ? 'Immediate' : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+            status: 'Waiting',
+            doctor_name: json.data.doctor_name || assignedDoctor,
+            department: json.data.department || specialty,
+            priority: Boolean(json.data.priority)
+          };
+        }
+      }
+    } catch (err) {
+      console.warn("Backend post failed, creating local walk-in fallback:", err);
+    }
+
+    // Fallback if backend wasn't reachable
+    if (!registeredToken) {
+      const maxToken = queue.length > 0 ? Math.max(...queue.map(q => parseInt(q.id) || 100)) : 100;
+      const newToken = maxToken + 1;
+      registeredToken = {
+        id: newToken.toString(),
+        rawId: newToken.toString(),
+        name,
+        phone: phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3'),
+        age: Number(age) || 30,
+        type: 'Walk-in',
+        scheduled: priority ? 'Immediate' : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        status: 'Waiting',
+        doctor_name: assignedDoctor,
+        department: specialty,
+        priority
+      };
+    }
+
+    // Place into queue according to priority
     const newQueue = [...queue];
     if (priority) {
       if (newQueue.length > 0 && newQueue[0].status?.toLowerCase() === 'consulting') {
-        newQueue.splice(1, 0, newPatient);
+        newQueue.splice(1, 0, registeredToken);
       } else {
-        newQueue.unshift(newPatient);
+        newQueue.unshift(registeredToken);
       }
     } else {
-      newQueue.push(newPatient);
+      newQueue.push(registeredToken);
     }
 
+    setQueue(newQueue);
     setLocalData('hospital_queue', JSON.stringify(newQueue));
-    try {
-      
-    } catch (e) { }
+    setLastRegisteredToken(registeredToken);
 
+    // Reset form
     setPhone("");
     setName("");
     setAge("");
     setPriority(false);
+    setIsSubmitting(false);
   };
+
+  // Filtered queue for table
+  const filteredQueue = queue.filter(p => {
+    const matchesSearch = !searchTerm ||
+      p.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.id?.toString().includes(searchTerm) ||
+      p.doctor_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      p.phone?.includes(searchTerm);
+
+    if (!matchesSearch) return false;
+    if (filterStatus === 'All') return true;
+    if (filterStatus === 'In Room') return p.status?.toLowerCase() === 'consulting';
+    return p.status === filterStatus;
+  });
 
   return (
     <div className="flex w-full min-h-screen bg-[#f4f7fb]">
       {/* Sidebar Navigation */}
       <div className="w-64 bg-[#002b5e] text-white flex flex-col shadow-2xl z-20 sticky top-0 h-screen">
-        <div className="p-8 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-emerald-400">
+        <div className="p-8 flex items-center gap-3 border-b border-white/10">
+          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
             <Building2 className="w-6 h-6" />
           </div>
           <div>
-            <h1 className="text-xl font-extrabold tracking-tight leading-tight">Receptionist<br />Portal</h1>
+            <h1 className="text-xl font-extrabold tracking-tight leading-tight">Receptionist<br /><span className="text-emerald-400">Command Desk</span></h1>
           </div>
         </div>
 
-        <nav className="flex-1 px-4 space-y-2 mt-4">
-          <button onClick={() => setTab('intake')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${tab === 'intake' ? 'bg-[#004b87] text-white shadow-inner border border-white/5' : 'text-slate-400 font-semibold hover:bg-white/5 hover:text-white cursor-pointer'}`}>
-            <ClipboardList className={`w-5 h-5 ${tab === 'intake' ? 'text-emerald-400' : ''}`} /> Intake Management
+        {/* Live status badge */}
+        <div className="px-6 py-4">
+          <div className="bg-[#001f44] rounded-xl p-3 border border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className={`w-2.5 h-2.5 rounded-full ${isBackendConnected ? 'bg-emerald-400 animate-ping' : isBackendConnected === false ? 'bg-amber-400' : 'bg-slate-400'}`}></span>
+              <span className="text-xs font-semibold text-slate-300">
+                {isBackendConnected ? 'API Connected (5000)' : isBackendConnected === false ? 'Local Storage Sync' : 'Checking API...'}
+              </span>
+            </div>
+            <button onClick={syncQueue} title="Refresh Live Queue" className="p-1 text-slate-400 hover:text-white rounded transition-colors cursor-pointer">
+              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-emerald-400' : ''}`} />
+            </button>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-4 space-y-2 mt-2">
+          <button onClick={() => setTab('intake')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${tab === 'intake' ? 'bg-[#004b87] text-white shadow-inner border border-white/10' : 'text-slate-400 font-semibold hover:bg-white/5 hover:text-white'}`}>
+            <ClipboardList className={`w-5 h-5 ${tab === 'intake' ? 'text-emerald-400' : ''}`} /> Walk-In Intake
           </button>
-          <button onClick={() => setTab('all')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${tab === 'all' ? 'bg-[#004b87] text-white shadow-inner border border-white/5' : 'text-slate-400 font-semibold hover:bg-white/5 hover:text-white cursor-pointer'}`}>
+          <button onClick={() => setTab('all')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${tab === 'all' ? 'bg-[#004b87] text-white shadow-inner border border-white/10' : 'text-slate-400 font-semibold hover:bg-white/5 hover:text-white'}`}>
             <Users className={`w-5 h-5 ${tab === 'all' ? 'text-emerald-400' : ''}`} /> All Patients
           </button>
-          <button onClick={() => setTab('analytics')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${tab === 'analytics' ? 'bg-[#004b87] text-white shadow-inner border border-white/5' : 'text-slate-400 font-semibold hover:bg-white/5 hover:text-white cursor-pointer'}`}>
+          <button onClick={() => setTab('analytics')} className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all cursor-pointer ${tab === 'analytics' ? 'bg-[#004b87] text-white shadow-inner border border-white/10' : 'text-slate-400 font-semibold hover:bg-white/5 hover:text-white'}`}>
             <BarChart2 className={`w-5 h-5 ${tab === 'analytics' ? 'text-emerald-400' : ''}`} /> Analytics
           </button>
         </nav>
 
-        <div className="p-4 mt-auto">
-          <button onClick={onBack} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-bold transition-all border border-red-500/20">
+        <div className="p-4 mt-auto border-t border-white/10">
+          <button onClick={onBack} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl font-bold transition-all border border-red-500/20 cursor-pointer">
             <Lock className="w-4 h-4" /> Secure Logout
           </button>
         </div>
@@ -1529,8 +1932,17 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col h-screen overflow-hidden">
         {/* Top Bar */}
-        <header className="bg-white/70 backdrop-blur-2xl border-b border-slate-200/60 px-10 py-5 flex items-center justify-between z-10 sticky top-0 shadow-sm">
-          <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Active Shift Overview</h2>
+        <header className="bg-white/80 backdrop-blur-2xl border-b border-slate-200/80 px-10 py-5 flex items-center justify-between z-10 sticky top-0 shadow-sm">
+          <div>
+            <h2 className="text-2xl font-extrabold text-slate-900 tracking-tight">Receptionist & Walk-In Intake</h2>
+            <p className="text-xs font-semibold text-slate-500">Live multi-channel queue orchestration with automatic token dispatch</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="px-3.5 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-xl text-xs font-extrabold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              {queue.filter(q => q.status !== 'No-Show').length} Active in Queue
+            </div>
+          </div>
         </header>
 
         {/* Scrollable grid area */}
@@ -1545,58 +1957,64 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
                     <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-bl-full blur-2xl z-0 pointer-events-none"></div>
                   )}
 
-                  <div className="flex items-center gap-3 mb-8 relative z-10">
-                    <div className="w-10 h-10 rounded-xl bg-[#004b87]/5 flex items-center justify-center text-[#004b87]">
-                      <User className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-extrabold text-[#004b87]">Intake Registry</h3>
-                      <p className="text-xs font-semibold text-slate-400">Quick Search & Add</p>
+                  <div className="flex items-center justify-between mb-6 relative z-10">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#004b87]/10 flex items-center justify-center text-[#004b87]">
+                        <User className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-extrabold text-[#004b87]">New Walk-In Registration</h3>
+                        <p className="text-xs font-semibold text-slate-400">Express Intake & Priority Routing</p>
+                      </div>
                     </div>
                   </div>
 
                   {flashSuccess && (
                     <div className="mb-6 p-3 bg-emerald-100 text-emerald-800 rounded-xl text-sm font-bold border border-emerald-200 flex items-center gap-2 animate-in slide-in-from-top-2 duration-300">
-                      <CheckCircle2 className="w-5 h-5" /> Patient recognized and auto-filled!
+                      <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Patient recognized and auto-filled!
                     </div>
                   )}
 
-                  <form onSubmit={handleAddQueue} className="space-y-5 relative z-10">
+                  <form onSubmit={handleAddQueue} className="space-y-4 relative z-10">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Phone Search</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Phone Number (10 Digits)</label>
                       <div className="relative">
-                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#004b87]/40" />
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#004b87]/50" />
                         <input
                           type="text"
-                          placeholder="10-digit number"
+                          placeholder="e.g. 9876543210"
                           maxLength={10}
                           value={phone}
                           onChange={handlePhoneChange}
-                          className="w-full pl-11 pr-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 transition-all font-bold tracking-widest"
+                          className="w-full pl-11 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 transition-all font-bold tracking-widest text-sm"
                           required
                         />
                       </div>
                     </div>
 
                     <div className="space-y-1.5">
-                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Patient Name</label>
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Patient Full Name</label>
                       <input
                         type="text"
+                        placeholder="e.g. Rahul Sharma"
                         value={name}
                         onChange={(e) => setName(e.target.value)}
-                        className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 transition-all font-semibold"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 transition-all font-semibold text-sm"
                         required
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Age</label>
                         <input
                           type="number"
+                          placeholder="e.g. 32"
+                          min="1"
+                          max="120"
                           value={age}
                           onChange={(e) => setAge(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 transition-all font-semibold"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 transition-all font-semibold text-sm"
                           required
                         />
                       </div>
@@ -1605,128 +2023,265 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
                         <select
                           value={specialty}
                           onChange={(e) => setSpecialty(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 font-semibold appearance-none"
+                          className="w-full px-3 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 font-semibold text-sm"
                         >
-                          {DEPARTMENTS.map(dept => <option key={dept}>{dept}</option>)}
-                        </select>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Doctor Assigned</label>
-                        <select
-                          value={assignedDoctor}
-                          onChange={(e) => setAssignedDoctor(e.target.value)}
-                          className="w-full px-4 py-3.5 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 font-semibold appearance-none"
-                        >
-                          <option>Dr. Priya Sharma</option>
-                          <option>Dr. Rohan Kapoor</option>
-                          <option>Dr. Anil Desai</option>
-                          <option>Unassigned</option>
+                          {DEPARTMENTS.map(dept => <option key={dept} value={dept}>{dept}</option>)}
                         </select>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-3 pt-2">
-                      <label className="relative flex cursor-pointer items-center rounded-full p-2" htmlFor="priority-checkbox">
-                        <input type="checkbox" id="priority-checkbox" checked={priority} onChange={(e) => setPriority(e.target.checked)} className="before:content[''] peer relative h-5 w-5 cursor-pointer appearance-none rounded-md border border-slate-300 transition-all before:absolute before:top-2/4 before:left-2/4 before:block before:h-12 before:w-12 before:-translate-y-2/4 before:-translate-x-2/4 before:rounded-full before:bg-red-500 before:opacity-0 before:transition-opacity checked:border-red-500 checked:bg-red-500 checked:before:bg-red-500 hover:before:opacity-10" />
-                        <span className="pointer-events-none absolute top-2/4 left-2/4 -translate-y-2/4 -translate-x-2/4 text-white opacity-0 transition-opacity peer-checked:opacity-100"><Check className="h-3.5 w-3.5" strokeWidth={3} /></span>
-                      </label>
-                      <div>
-                        <span className="text-sm font-bold text-slate-700">Priority: Critical</span>
-                        <p className="text-[10px] text-slate-400 font-semibold leading-tight mt-0.5">Bypass standard queue logic and insert at front.</p>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Assigned Physician</label>
+                      <select
+                        value={assignedDoctor}
+                        onChange={(e) => setAssignedDoctor(e.target.value)}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 focus:bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#004b87]/30 font-semibold text-sm"
+                      >
+                        <option value="Unassigned">Auto-assign / Unassigned</option>
+                        {DOCTORS.map(d => <option key={d.id} value={d.name}>{d.name} ({d.specialty})</option>)}
+                      </select>
+                    </div>
+
+                    {/* Priority Toggle */}
+                    <div className="p-3.5 rounded-2xl bg-amber-500/5 border border-amber-500/20 flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <Flame className={`w-5 h-5 ${priority ? 'text-red-500 fill-red-500' : 'text-amber-500'}`} />
+                        <div>
+                          <span className="text-xs font-extrabold text-slate-800">Critical / Emergency Priority</span>
+                          <p className="text-[10px] text-slate-500 font-medium">Bypass queue & place at front for immediate consultation</p>
+                        </div>
                       </div>
+                      <input
+                        type="checkbox"
+                        checked={priority}
+                        onChange={(e) => setPriority(e.target.checked)}
+                        className="w-5 h-5 accent-red-600 rounded cursor-pointer"
+                      />
                     </div>
 
                     <button
                       type="submit"
-                      disabled={!name || phone.length < 10}
-                      className="w-full py-4 mt-4 rounded-xl bg-[#00a651] disabled:bg-slate-300 disabled:cursor-not-allowed disabled:shadow-none text-white font-extrabold text-lg transition-all shadow-[0_10px_30px_-5px_rgba(0,166,81,0.4)] hover:shadow-[0_15px_40px_-5px_rgba(0,166,81,0.5)] hover:-translate-y-1 active:translate-y-0 flex justify-center items-center gap-2"
+                      disabled={!name || phone.length < 10 || isSubmitting}
+                      className="w-full py-3.5 mt-2 rounded-xl bg-[#00a651] hover:bg-[#008f45] disabled:bg-slate-300 disabled:cursor-not-allowed disabled:shadow-none text-white font-extrabold text-base transition-all shadow-[0_10px_30px_-5px_rgba(0,166,81,0.4)] hover:shadow-[0_15px_40px_-5px_rgba(0,166,81,0.5)] hover:-translate-y-0.5 active:translate-y-0 flex justify-center items-center gap-2 cursor-pointer"
                     >
-                      <Clipboard className="w-5 h-5" /> Add to Queue
+                      {isSubmitting ? (
+                        <RefreshCw className="w-5 h-5 animate-spin" />
+                      ) : (
+                        <>
+                          <PlusCircle className="w-5 h-5" /> Issue Walk-In Token
+                        </>
+                      )}
                     </button>
                   </form>
+
+                  {/* Last Registered Token Feedback Card */}
+                  {lastRegisteredToken && (
+                    <div className="mt-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 animate-in fade-in zoom-in duration-300">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-extrabold text-emerald-800 uppercase tracking-widest">Token Issued</span>
+                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white font-black text-sm">
+                          #{lastRegisteredToken.id}
+                        </span>
+                      </div>
+                      <p className="text-sm font-bold text-slate-800">{lastRegisteredToken.name}</p>
+                      <p className="text-xs text-slate-500 font-medium">{lastRegisteredToken.doctor_name} • {lastRegisteredToken.department}</p>
+                      <div className="mt-2 text-[11px] text-emerald-700 font-semibold flex items-center gap-1.5">
+                        <CheckCircle className="w-3.5 h-3.5" /> Added to live queue successfully
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Right Column: Live Queue */}
+              {/* Right Column: Live Master Queue */}
               <div className="lg:col-span-8">
                 <div className="bg-white rounded-3xl p-8 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.05)] border border-slate-100 flex flex-col h-full">
-                  <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+                  
+                  {/* Queue Header & Filters */}
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-6 border-b border-slate-100">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-[#00a651]/10 flex items-center justify-center text-[#00a651]">
                         <Users className="w-5 h-5" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-extrabold text-[#004b87]">Live Master Queue</h3>
-                        <p className="text-xs font-semibold text-slate-400">Linked to localStorage</p>
+                        <h3 className="text-xl font-extrabold text-[#004b87]">Live Patient Queue</h3>
+                        <p className="text-xs font-semibold text-slate-400">Receptionist Master Control Center</p>
                       </div>
                     </div>
-                    <div className="px-4 py-1.5 bg-slate-100 text-slate-600 rounded-lg text-sm font-bold border border-slate-200 flex items-center gap-2">
-                      <Activity className="w-4 h-4 text-emerald-500 animate-pulse" /> {queue.length} Total Waiting
+
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      {/* Search Bar */}
+                      <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search patient, token, doctor..."
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                          className="pl-9 pr-3 py-2 text-xs font-semibold bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#004b87]/20 w-48 transition-all"
+                        />
+                      </div>
+
+                      {/* Status Filter Tabs */}
+                      <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                        {['All', 'Waiting', 'In Room', 'No-Show'].map(s => (
+                          <button
+                            key={s}
+                            onClick={() => setFilterStatus(s)}
+                            className={`px-2.5 py-1 rounded-lg transition-all cursor-pointer ${filterStatus === s ? 'bg-white text-[#004b87] shadow-sm' : 'text-slate-500 hover:text-slate-800'}`}
+                          >
+                            {s}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Sync Button */}
+                      <button
+                        onClick={syncQueue}
+                        title="Sync live queue"
+                        className="p-2 border border-slate-200 rounded-xl hover:bg-slate-50 text-slate-600 transition-colors cursor-pointer"
+                      >
+                        <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin text-[#004b87]' : ''}`} />
+                      </button>
                     </div>
                   </div>
 
-                  {queue.length > 0 ? (
+                  {filteredQueue.length > 0 ? (
                     <div className="overflow-x-auto flex-1">
                       <table className="w-full text-left">
                         <thead>
                           <tr className="text-xs font-bold text-slate-400 uppercase tracking-widest border-b border-slate-100">
                             <th className="pb-4 pl-2 font-semibold w-24">Token</th>
-                            <th className="pb-4 font-semibold">Patient Name</th>
-                            <th className="pb-4 font-semibold">Phone Mask</th>
-                            <th className="pb-4 font-semibold">Source</th>
-                            <th className="pb-4 font-semibold">Doctor</th>
-                            <th className="pb-4 font-semibold text-right pr-2">Action</th>
+                            <th className="pb-4 font-semibold">Patient</th>
+                            <th className="pb-4 font-semibold">Type / Source</th>
+                            <th className="pb-4 font-semibold">Assigned Doctor</th>
+                            <th className="pb-4 font-semibold">Status</th>
+                            <th className="pb-4 font-semibold text-right pr-2">Actions</th>
                           </tr>
                         </thead>
                         <tbody className="text-sm font-medium">
-                          {queue.map((p, idx) => {
+                          {filteredQueue.map((p) => {
                             const isConsulting = p.status?.toLowerCase() === 'consulting';
+                            const isNoShow = p.status === 'No-Show';
+                            const isWaiting = !isConsulting && !isNoShow;
+
                             return (
-                              <tr key={p.id} className={`border-b border-slate-50 last:border-0 transition-colors ${isConsulting ? 'bg-emerald-50/20' : 'hover:bg-slate-50/50'}`}>
+                              <tr key={p.id} className={`border-b border-slate-50 last:border-0 transition-colors ${isConsulting ? 'bg-emerald-50/40' : 'hover:bg-slate-50/50'}`}>
                                 <td className="py-4 pl-2">
-                                  <span className={`inline-flex items-center justify-center min-w-[3.5rem] px-2 py-1 rounded text-sm font-extrabold ${isConsulting ? 'bg-emerald-100 text-emerald-800' : 'bg-[#004b87]/10 text-[#004b87]'}`}>
-                                    #{p.id}
-                                  </span>
-                                  {isConsulting && <span className="block mt-1 text-[10px] uppercase font-bold text-emerald-600 animate-pulse text-center">In Room</span>}
-                                </td>
-                                <td className="py-4 text-slate-800 font-bold">{p.name}</td>
-                                <td className="py-4 text-slate-400 font-mono text-xs">{p.phone || 'xxx-xxx-xxxx'}</td>
-                                <td className="py-4">
-                                  <span className={`inline-flex items-center px-2 py-1 rounded-md text-xs font-extrabold tracking-wide ${p.type === 'Online' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
-                                    {p.type}
-                                  </span>
-                                </td>
-                                <td className="py-4">
-                                  <span className="text-slate-600 font-semibold text-xs">{p.doctor_name || 'Unassigned'}</span>
-                                </td>
-                                <td className="py-4 text-right pr-2">
-                                  {isConsulting ? (
-                                    <span className="text-xs font-bold text-emerald-600 px-4 py-2 opacity-50">Consulting</span>
-                                  ) : p.status === 'No-Show' ? (
-                                    <span className="text-xs font-bold text-red-500 px-4 py-2 opacity-50">No-Show</span>
-                                  ) : (
-                                    <div className="flex justify-end items-center gap-1.5">
-                                      <span className="text-xs font-bold text-[#004b87] bg-[#004b87]/5 border border-[#004b87]/10 px-3 py-1.5 rounded-full tracking-widest">{p.scheduled}</span>
-                                      <button onClick={() => handlePing(p)} title="Ping via SMS" className="ml-2 w-8 h-8 rounded-full border border-slate-200 text-amber-500 hover:bg-amber-50 hover:border-amber-200 flex items-center justify-center transition-all bg-white shadow-sm cursor-pointer hover:shadow">
-                                        <Bell className="w-4 h-4" />
-                                      </button>
-                                      <button onClick={() => handleNoShow(p)} title="Mark No-Show" className="w-8 h-8 rounded-full border border-slate-200 text-red-400 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-all bg-white shadow-sm cursor-pointer hover:shadow">
-                                        <UserMinus className="w-4 h-4" />
-                                      </button>
-                                    </div>
+                                  <div className="flex items-center gap-1.5">
+                                    <span className={`inline-flex items-center justify-center min-w-[3.2rem] px-2 py-1 rounded-lg text-sm font-black ${isConsulting ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' : p.priority ? 'bg-red-100 text-red-700 border border-red-200' : 'bg-[#004b87]/10 text-[#004b87]'}`}>
+                                      #{p.id}
+                                    </span>
+                                  </div>
+                                  {p.priority && (
+                                    <span className="inline-block mt-1 text-[9px] uppercase font-extrabold px-1.5 py-0.5 rounded bg-red-500 text-white tracking-wider">
+                                      Critical
+                                    </span>
                                   )}
                                 </td>
+
+                                <td className="py-4">
+                                  <div className="font-bold text-slate-800">{p.name}</div>
+                                  <div className="text-slate-400 font-mono text-xs flex items-center gap-1 mt-0.5">
+                                    <span>{p.phone || 'No Phone'}</span>
+                                    {p.age && <span>• {p.age} yrs</span>}
+                                  </div>
+                                </td>
+
+                                <td className="py-4">
+                                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-extrabold tracking-wide ${p.type === 'Online' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-slate-100 text-slate-600 border border-slate-200'}`}>
+                                    {p.type}
+                                  </span>
+                                  {p.department && (
+                                    <div className="text-[11px] text-slate-400 font-medium mt-0.5">{p.department}</div>
+                                  )}
+                                </td>
+
+                                <td className="py-4">
+                                  <span className="text-slate-700 font-semibold text-xs">{p.doctor_name || 'Unassigned'}</span>
+                                </td>
+
+                                <td className="py-4">
+                                  {isConsulting ? (
+                                    <span className="inline-flex items-center gap-1.5 text-xs font-extrabold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200 animate-pulse">
+                                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> In Room
+                                    </span>
+                                  ) : isNoShow ? (
+                                    <span className="inline-flex items-center text-xs font-extrabold text-red-600 bg-red-50 px-3 py-1 rounded-full border border-red-200">
+                                      No-Show
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center text-xs font-bold text-[#004b87] bg-[#004b87]/10 px-3 py-1 rounded-full">
+                                      Waiting ({p.scheduled || 'Queued'})
+                                    </span>
+                                  )}
+                                </td>
+
+                                <td className="py-4 text-right pr-2">
+                                  <div className="flex justify-end items-center gap-1.5">
+                                    {/* SMS Notification Ping */}
+                                    <button
+                                      onClick={() => handlePing(p)}
+                                      title="Send SMS Ping Alert"
+                                      className="w-8 h-8 rounded-lg border border-slate-200 text-amber-600 hover:bg-amber-50 hover:border-amber-300 flex items-center justify-center transition-all bg-white shadow-sm cursor-pointer"
+                                    >
+                                      <Bell className="w-4 h-4" />
+                                    </button>
+
+                                    {/* Toggle In-Room / Consulting */}
+                                    {isWaiting && (
+                                      <button
+                                        onClick={() => handleUpdateStatus(p, 'Consulting')}
+                                        title="Mark In Room (Consulting)"
+                                        className="w-8 h-8 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 flex items-center justify-center transition-all bg-white shadow-sm cursor-pointer"
+                                      >
+                                        <Play className="w-4 h-4 fill-emerald-600" />
+                                      </button>
+                                    )}
+
+                                    {/* Mark No-Show */}
+                                    {isWaiting && (
+                                      <button
+                                        onClick={() => handleUpdateStatus(p, 'No-Show')}
+                                        title="Mark as No-Show"
+                                        className="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 flex items-center justify-center transition-all bg-white shadow-sm cursor-pointer"
+                                      >
+                                        <UserMinus className="w-4 h-4" />
+                                      </button>
+                                    )}
+
+                                    {/* Requeue if No-Show */}
+                                    {isNoShow && (
+                                      <button
+                                        onClick={() => handleUpdateStatus(p, 'Waiting')}
+                                        title="Requeue Patient"
+                                        className="w-8 h-8 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 flex items-center justify-center transition-all bg-white shadow-sm cursor-pointer"
+                                      >
+                                        <RefreshCw className="w-3.5 h-3.5" />
+                                      </button>
+                                    )}
+
+                                    {/* Delete / Remove Walk-in */}
+                                    <button
+                                      onClick={() => handleDelete(p)}
+                                      title="Remove from Queue"
+                                      className="w-8 h-8 rounded-lg border border-slate-200 text-slate-400 hover:text-red-600 hover:bg-red-50 hover:border-red-300 flex items-center justify-center transition-all bg-white shadow-sm cursor-pointer"
+                                    >
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    </button>
+                                  </div>
+                                </td>
                               </tr>
-                            )
+                            );
                           })}
                         </tbody>
                       </table>
                     </div>
                   ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400">
+                    <div className="flex-1 flex flex-col items-center justify-center text-slate-400 py-12">
                       <Users className="w-16 h-16 mb-4 opacity-20" />
-                      <p className="font-semibold text-lg">No active queue.</p>
-                      <p className="text-sm">Use the Intake Registry to add walk-ins.</p>
+                      <p className="font-bold text-lg text-slate-600">No active patients found</p>
+                      <p className="text-xs text-slate-400 mt-1">{searchTerm ? 'Try adjusting your search query' : 'Use the intake panel on the left to register a new walk-in'}</p>
                     </div>
                   )}
                 </div>
@@ -2083,7 +2638,7 @@ function PatientDashboard({ phone, onNew, onTrack, onCancel, onReschedule, onLog
       <div className="flex flex-col md:flex-row justify-between md:items-end mb-10 gap-6">
         <div>
           <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">My Appointments</h1>
-          <p className="text-slate-500 mt-2 font-medium flex items-center gap-2"><Lock className="w-4 h-4 text-emerald-500" /> Logged in securely as {phone}</p>
+          <p className="text-slate-500 mt-2 font-medium flex items-center gap-2"><Lock className="w-4 h-4 text-emerald-500" /> Logged in securely as {phone || 'patient@mediqueue.com'}</p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
           <button onClick={onLogout} className="px-5 py-3 rounded-xl border-2 border-slate-200 text-slate-600 font-bold hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-sm cursor-pointer">

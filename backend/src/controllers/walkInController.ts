@@ -1,71 +1,41 @@
-import { Request, Response, NextFunction } from 'express';
-import { walkInService } from '../services/walkInService';
+import { Request, Response } from "express";
+import { registerWalkIn } from "../services/walkInService";
 
-export class WalkInController {
-  async createWalkIn(req: Request, res: Response, next: NextFunction) {
+export async function createWalkIn(req: Request, res: Response) {
     try {
-      const patient = await walkInService.registerWalkIn(req.body);
-      res.status(201).json({
-        success: true,
-        message: 'Walk-in registered successfully',
-        data: patient,
-      });
-    } catch (err: any) {
-      res.status(400).json({
-        success: false,
-        error: err.message || 'Failed to register walk-in',
-      });
-    }
-  }
+        const {
+            name,
+            phone,
+            clinic_id,
+            doctor_id,
+            priority
+        } = req.body;
 
-  async getQueue(req: Request, res: Response, next: NextFunction) {
-    try {
-      const queue = await walkInService.getQueue();
-      res.status(200).json({
-        success: true,
-        count: queue.length,
-        data: queue,
-      });
-    } catch (err: any) {
-      res.status(500).json({
-        success: false,
-        error: err.message,
-      });
-    }
-  }
+        if (!name || !phone || !clinic_id || !doctor_id) {
+            return res.status(400).json({
+                message: "Name, phone, clinic_id and doctor_id are required"
+            });
+        }
 
-  async updateStatus(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { id } = req.params;
-      const { status } = req.body;
-      await walkInService.updateQueueStatus(id, status);
-      res.status(200).json({
-        success: true,
-        message: `Status updated to ${status}`,
-      });
-    } catch (err: any) {
-      res.status(400).json({
-        success: false,
-        error: err.message,
-      });
-    }
-  }
+        const result = await registerWalkIn({
+            name,
+            phone,
+            clinic_id,
+            doctor_id,
+            priority
+        });
 
-  async deleteWalkIn(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { id } = req.params;
-      await walkInService.removeWalkIn(id);
-      res.status(200).json({
-        success: true,
-        message: 'Walk-in removed from queue',
-      });
-    } catch (err: any) {
-      res.status(400).json({
-        success: false,
-        error: err.message,
-      });
+        return res.status(201).json({
+            message: "Walk-in registered successfully",
+            ...result
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            message: "Failed to register walk-in",
+            error: error instanceof Error
+                ? error.message
+                : "Unknown error"
+        });
     }
-  }
 }
-
-export const walkInController = new WalkInController();

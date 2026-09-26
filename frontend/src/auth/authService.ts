@@ -15,252 +15,239 @@ const AUTH_STORAGE_KEY = 'mediqueue_auth_user';
 
 export const authService = {
   /**
-   * Patient Sign In
+   * Patient Sign In - strictly verifies Supabase credentials
    */
   async loginPatient(email: string, pass: string): Promise<AuthUser> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pass,
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: pass,
+    });
 
-      if (error) {
-        console.warn("Supabase auth failed, trying local fallback:", error.message);
-      }
-
-      const user: AuthUser = {
-        id: data?.user?.id || `patient_${email.split('@')[0]}`,
-        email,
-        name: data?.user?.user_metadata?.full_name || email.split('@')[0],
-        role: 'patient',
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
-    } catch (err: any) {
-      const user: AuthUser = {
-        id: `patient_${email.split('@')[0]}`,
-        email,
-        name: email.split('@')[0],
-        role: 'patient',
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
+    if (error) {
+      throw new Error(error.message || 'Invalid email or password');
     }
+
+    if (!data || !data.user) {
+      throw new Error('User not found. Please check your credentials.');
+    }
+
+    const user: AuthUser = {
+      id: data.user.id,
+      email: data.user.email || email,
+      name: data.user.user_metadata?.full_name || email.split('@')[0],
+      role: 'patient',
+    };
+
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   },
 
   /**
    * Patient Sign Up
    */
   async signupPatient(email: string, pass: string, name?: string): Promise<AuthUser> {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: pass,
-        options: {
-          data: {
-            full_name: name || email.split('@')[0],
-            role: 'patient',
-          },
+    const trimmedEmail = email.trim();
+    const fullName = name?.trim() || trimmedEmail.split('@')[0];
+
+    const { data, error } = await supabase.auth.signUp({
+      email: trimmedEmail,
+      password: pass,
+      options: {
+        data: {
+          full_name: fullName,
+          role: 'patient',
         },
-      });
+      },
+    });
 
-      if (error) {
-        console.warn("Supabase signup note:", error.message);
-      }
-
-      // Also create record in patients table if possible
-      try {
-        await supabase.from('patients').insert([
-          { email, name: name || email.split('@')[0], full_name: name || email.split('@')[0] }
-        ]);
-      } catch (e) {}
-
-      const user: AuthUser = {
-        id: data?.user?.id || `patient_${email.split('@')[0]}`,
-        email,
-        name: name || email.split('@')[0],
-        role: 'patient',
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
-    } catch (err: any) {
-      const user: AuthUser = {
-        id: `patient_${email.split('@')[0]}`,
-        email,
-        name: name || email.split('@')[0],
-        role: 'patient',
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
+    if (error) {
+      throw new Error(error.message || 'Signup failed');
     }
+
+    if (!data || !data.user) {
+      throw new Error('Unable to create patient account.');
+    }
+
+    if (data.user.identities && data.user.identities.length === 0) {
+      throw new Error('An account with this email already exists. Please sign in instead.');
+    }
+
+    // Attempt to register in patients table if configured
+    try {
+      await supabase.from('patients').insert([
+        { id: data.user.id, email: trimmedEmail, name: fullName, full_name: fullName }
+      ]);
+    } catch (e) {
+      // Table insert is optional if handled via db trigger
+    }
+
+    const user: AuthUser = {
+      id: data.user.id,
+      email: data.user.email || trimmedEmail,
+      name: fullName,
+      role: 'patient',
+    };
+
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   },
 
   /**
    * Doctor Sign In
    */
   async loginDoctor(email: string, pass: string): Promise<AuthUser> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pass,
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: pass,
+    });
 
-      if (error) {
-        console.warn("Supabase doctor login note:", error.message);
-      }
-
-      const user: AuthUser = {
-        id: data?.user?.id || `doc_${email.split('@')[0]}`,
-        email,
-        name: data?.user?.user_metadata?.full_name || 'Dr. ' + (email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)),
-        role: 'doctor',
-        department: data?.user?.user_metadata?.department || 'General Medicine',
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
-    } catch (err: any) {
-      const user: AuthUser = {
-        id: `doc_${email.split('@')[0]}`,
-        email,
-        name: 'Dr. ' + (email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)),
-        role: 'doctor',
-        department: 'General Medicine',
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
+    if (error) {
+      throw new Error(error.message || 'Invalid doctor credentials');
     }
+
+    if (!data || !data.user) {
+      throw new Error('Doctor profile not found.');
+    }
+
+    const docName = data.user.user_metadata?.full_name || ('Dr. ' + (email.split('@')[0].charAt(0).toUpperCase() + email.split('@')[0].slice(1)));
+    const dept = data.user.user_metadata?.department || 'General Medicine';
+
+    const user: AuthUser = {
+      id: data.user.id,
+      email: data.user.email || email,
+      name: docName,
+      role: 'doctor',
+      department: dept,
+    };
+
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   },
 
   /**
    * Doctor Sign Up
    */
   async signupDoctor(email: string, pass: string, name?: string, department?: string): Promise<AuthUser> {
-    try {
-      const docName = name ? (name.startsWith('Dr.') ? name : `Dr. ${name}`) : `Dr. ${email.split('@')[0]}`;
-      const dept = department || 'General Medicine';
+    const trimmedEmail = email.trim();
+    const rawName = name?.trim() || trimmedEmail.split('@')[0];
+    const docName = rawName.startsWith('Dr.') ? rawName : `Dr. ${rawName}`;
+    const dept = department || 'General Medicine';
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: pass,
-        options: {
-          data: {
-            full_name: docName,
-            role: 'doctor',
-            department: dept,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email: trimmedEmail,
+      password: pass,
+      options: {
+        data: {
+          full_name: docName,
+          role: 'doctor',
+          department: dept,
         },
-      });
+      },
+    });
 
-      if (error) {
-        console.warn("Supabase doctor signup note:", error.message);
-      }
-
-      try {
-        await supabase.from('doctors').insert([
-          { email, name: docName, full_name: docName, department: dept, specialty: dept }
-        ]);
-      } catch (e) {}
-
-      const user: AuthUser = {
-        id: data?.user?.id || `doc_${email.split('@')[0]}`,
-        email,
-        name: docName,
-        role: 'doctor',
-        department: dept,
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
-    } catch (err: any) {
-      const docName = name ? (name.startsWith('Dr.') ? name : `Dr. ${name}`) : `Dr. ${email.split('@')[0]}`;
-      const user: AuthUser = {
-        id: `doc_${email.split('@')[0]}`,
-        email,
-        name: docName,
-        role: 'doctor',
-        department: department || 'General Medicine',
-      };
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
+    if (error) {
+      throw new Error(error.message || 'Doctor signup failed');
     }
+
+    if (!data || !data.user) {
+      throw new Error('Unable to create doctor account.');
+    }
+
+    if (data.user.identities && data.user.identities.length === 0) {
+      throw new Error('An account with this email already exists. Please sign in instead.');
+    }
+
+    try {
+      await supabase.from('doctors').insert([
+        { id: data.user.id, email: trimmedEmail, name: docName, department: dept, specialty: dept }
+      ]);
+    } catch (e) {
+      // Table insert optional if handled via db trigger
+    }
+
+    const user: AuthUser = {
+      id: data.user.id,
+      email: data.user.email || trimmedEmail,
+      name: docName,
+      role: 'doctor',
+      department: dept,
+    };
+
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   },
 
   /**
    * Staff / Receptionist Sign In
    */
   async loginStaff(email: string, pass: string): Promise<AuthUser> {
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password: pass,
-      });
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password: pass,
+    });
 
-      if (error) {
-        console.warn("Supabase staff login note:", error.message);
-      }
-
-      const user: AuthUser = {
-        id: data?.user?.id || 'staff_reception',
-        email,
-        name: data?.user?.user_metadata?.full_name || 'Front Desk Receptionist',
-        role: 'staff',
-      };
-      sessionStorage.setItem('isAdmin', 'true');
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
-    } catch (err: any) {
-      const user: AuthUser = {
-        id: 'staff_reception',
-        email,
-        name: 'Front Desk Receptionist',
-        role: 'staff',
-      };
-      sessionStorage.setItem('isAdmin', 'true');
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
+    if (error) {
+      throw new Error(error.message || 'Invalid receptionist / staff credentials');
     }
+
+    if (!data || !data.user) {
+      throw new Error('Staff account not found.');
+    }
+
+    const staffName = data.user.user_metadata?.full_name || 'Front Desk Receptionist';
+
+    const user: AuthUser = {
+      id: data.user.id,
+      email: data.user.email || email,
+      name: staffName,
+      role: 'staff',
+    };
+
+    sessionStorage.setItem('isAdmin', 'true');
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   },
 
   /**
    * Staff / Receptionist Sign Up
    */
   async signupStaff(email: string, pass: string, name?: string): Promise<AuthUser> {
-    try {
-      const staffName = name || 'Receptionist (' + email.split('@')[0] + ')';
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password: pass,
-        options: {
-          data: {
-            full_name: staffName,
-            role: 'staff',
-          },
+    const trimmedEmail = email.trim();
+    const staffName = name?.trim() || ('Receptionist (' + trimmedEmail.split('@')[0] + ')');
+
+    const { data, error } = await supabase.auth.signUp({
+      email: trimmedEmail,
+      password: pass,
+      options: {
+        data: {
+          full_name: staffName,
+          role: 'staff',
         },
-      });
+      },
+    });
 
-      if (error) {
-        console.warn("Supabase staff signup note:", error.message);
-      }
-
-      const user: AuthUser = {
-        id: data?.user?.id || 'staff_reception',
-        email,
-        name: staffName,
-        role: 'staff',
-      };
-      sessionStorage.setItem('isAdmin', 'true');
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
-    } catch (err: any) {
-      const user: AuthUser = {
-        id: 'staff_reception',
-        email,
-        name: name || 'Front Desk Receptionist',
-        role: 'staff',
-      };
-      sessionStorage.setItem('isAdmin', 'true');
-      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
-      return user;
+    if (error) {
+      throw new Error(error.message || 'Staff registration failed');
     }
+
+    if (!data || !data.user) {
+      throw new Error('Unable to create staff account.');
+    }
+
+    if (data.user.identities && data.user.identities.length === 0) {
+      throw new Error('An account with this email already exists. Please sign in instead.');
+    }
+
+    const user: AuthUser = {
+      id: data.user.id,
+      email: data.user.email || trimmedEmail,
+      name: staffName,
+      role: 'staff',
+    };
+
+    sessionStorage.setItem('isAdmin', 'true');
+    sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(user));
+    return user;
   },
 
   getCurrentUser(): AuthUser | null {

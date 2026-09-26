@@ -1,24 +1,19 @@
-import express, { Express, Request, Response, NextFunction } from 'express';
-import cors from 'cors';
-import routes from './src/routes';
-import { errorHandler } from './src/middleware/errorHandler';
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
 
-const app: Express = express();
+dotenv.config();
 
-// Middleware
+const app = express();
+
 app.use(cors());
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// Health Check
-app.get('/health', (req: Request, res: Response) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get("/health", (req, res) => {
+    res.json({
+        status: "ok",
+        message: "MediQueue backend is running"
+    });
 });
-
-// API Routes
-app.use('/api', routes);
-
-// Global Error Handler
-app.use(errorHandler);
 
 export default app;

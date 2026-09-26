@@ -1,7 +1,7 @@
 import { Patient } from '../types';
 
 export class QueueRepository {
-  // Database / Supabase access layer methods
+  // Database access layer methods
   async getAll(): Promise<Patient[]> {
     return [];
   }

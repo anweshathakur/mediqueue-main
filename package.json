@@ -4,5 +4,8 @@
   "workspaces": [
     "frontend",
     "backend"
-  ]
+  ],
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.2"
+  }
 }

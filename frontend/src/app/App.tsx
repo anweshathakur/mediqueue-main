@@ -27,11 +27,19 @@ const INIT_QUEUE = [
   { id: '105', name: 'Vikram Singh', type: 'Walk-in', scheduled: '3:00 PM', status: 'Waiting' },
 ];
 
-import { supabase } from "../services/supabase";
+
+const INIT_HISTORY = [
+  { id: 1, patient_name: 'Aarav Patel', patient_type: 'Online', doctor_name: 'Dr. Arjun Mehta', completed_at: new Date(Date.now() - 3600000 * 2).toISOString() },
+  { id: 2, patient_name: 'Neha Gupta', patient_type: 'Walk-in', doctor_name: 'Dr. Priya Sharma', completed_at: new Date(Date.now() - 3600000).toISOString() },
+  { id: 3, patient_name: 'Rajesh Khanna', patient_type: 'Online', doctor_name: 'Dr. Rohan Kapoor', completed_at: new Date().toISOString() },
+];
 
 function initializeData() {
   if (!localStorage.getItem('hospital_queue')) {
     localStorage.setItem('hospital_queue', JSON.stringify(INIT_QUEUE));
+  }
+  if (!localStorage.getItem('patient_history')) {
+    localStorage.setItem('patient_history', JSON.stringify(INIT_HISTORY));
   }
   if (!localStorage.getItem('current_avg_consultation')) {
     localStorage.setItem('current_avg_consultation', '15');
@@ -44,27 +52,6 @@ function initializeData() {
 async function setLocalData(key: string, value: string) {
   localStorage.setItem(key, value);
   window.dispatchEvent(new Event('storage'));
-
-  // Sync upwards to Supabase seamlessly
-  try {
-    if (key === 'hospital_queue') {
-      const q = JSON.parse(value);
-      await supabase.from('hospital_queue').delete().neq('id', '0_impossible'); // delete all
-      if (q.length > 0) await supabase.from('hospital_queue').insert(q);
-    }
-    if (key === 'current_avg_consultation' || key === 'global_doctor_delay') {
-      const { data } = await supabase.from('app_state').select('singleton_id').single();
-      if (data) {
-        if (key === 'current_avg_consultation') {
-          await supabase.from('app_state').update({ avg_time: parseInt(value) }).eq('singleton_id', data.singleton_id);
-        } else {
-          await supabase.from('app_state').update({ global_delay: parseInt(value) }).eq('singleton_id', data.singleton_id);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn("Supabase background sync silent error:", err);
-  }
 }
 
 /* ═══════════════════════════════════════════════════════════
@@ -489,15 +476,10 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
     if (isPhoneValid) {
       setIsLoading(true);
       setErrorMsg("");
-      const phoneNum = phone.replace(/\s+/g, '');
-      const { error } = await supabase.auth.signInWithOtp({ phone: phoneNum });
-      setIsLoading(false);
-
-      if (error) {
-        setErrorMsg("Failed to send code. Please try again.");
-      } else {
+      setTimeout(() => {
+        setIsLoading(false);
         setStep("otp");
-      }
+      }, 500);
     }
   };
 
@@ -505,14 +487,10 @@ function PatientLoginPage({ onLogin, onBack }: { onLogin: (phone: string) => voi
     setIsLoading(true);
     setErrorMsg("");
     const phoneNum = phone.replace(/\s+/g, '');
-    const { error } = await supabase.auth.verifyOtp({ phone: phoneNum, token: otp, type: 'sms' });
-    setIsLoading(false);
-
-    if (error) {
-      setErrorMsg("Invalid OTP code. Please try again.");
-    } else {
+    setTimeout(() => {
+      setIsLoading(false);
       onLogin(phoneNum);
-    }
+    }, 500);
   };
 
   return (
@@ -1017,7 +995,7 @@ function PatientFlow({ initialPhone, onBackToHome, onComplete }: { initialPhone:
     localStorage.setItem('hospital_queue', JSON.stringify(nq));
     window.dispatchEvent(new Event('storage'));
     // Non-blocking remote insert avoids global DB-wipe triggers locking out real-time syncs
-    supabase.from('hospital_queue').insert([newPatient]).then();
+    
 
     // Dynamically compute the exact Live Tracker ETA for the SMS message payload
     const avgTime = parseInt(localStorage.getItem('current_avg_consultation') || '15', 10);
@@ -1276,42 +1254,32 @@ function ManagementAnalyticsView() {
   const [chartData, setChartData] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchHistory = async () => {
-      const { data } = await supabase.from('patient_history').select('*');
-      if (data) {
-        const counts: Record<string, number> = {};
-        // Initialize working hours
-        ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].forEach(h => counts[h] = 0);
+    const fetchHistory = () => {
+      const data = JSON.parse(localStorage.getItem('patient_history') || '[]');
+      const counts: Record<string, number> = {};
+      ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'].forEach(h => counts[h] = 0);
 
-        data.forEach((row: any) => {
-          const date = new Date(row.completed_at);
-          const hourStr = date.getHours().toString().padStart(2, '0') + ':00';
-          if (counts[hourStr] !== undefined) {
-            counts[hourStr]++;
-          } else {
-            counts[hourStr] = 1;
-          }
-        });
+      data.forEach((row: any) => {
+        const date = new Date(row.completed_at || Date.now());
+        const hourStr = date.getHours().toString().padStart(2, '0') + ':00';
+        if (counts[hourStr] !== undefined) {
+          counts[hourStr]++;
+        } else {
+          counts[hourStr] = 1;
+        }
+      });
 
-        const formatted = Object.keys(counts).sort().map(hour => ({
-          name: hour,
-          patients: counts[hour]
-        }));
+      const formatted = Object.keys(counts).sort().map(hour => ({
+        name: hour,
+        patients: counts[hour]
+      }));
 
-        setChartData(formatted);
-      }
+      setChartData(formatted);
     };
 
     fetchHistory();
-
-    // Auto-refresh when someone completes
-    const channel = supabase.channel('history-changes')
-      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'patient_history' }, () => {
-        fetchHistory();
-      })
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    window.addEventListener('storage', fetchHistory);
+    return () => window.removeEventListener('storage', fetchHistory);
   }, []);
 
   return (
@@ -1340,21 +1308,23 @@ function ManagementAllPatientsView({ queue }: { queue: any[] }) {
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from('patient_history').select('*').order('completed_at', { ascending: false }).then(({ data }) => {
-      if (data) setHistory(data);
-    });
+    const sync = () => {
+      const data = JSON.parse(localStorage.getItem('patient_history') || '[]');
+      setHistory(data);
+    };
+    sync();
+    window.addEventListener('storage', sync);
+    return () => window.removeEventListener('storage', sync);
   }, []);
 
   const allPatients = [
-    // Consulted Sequence
-    ...history.map(h => ({
+    ...history.map((h: any) => ({
       id: `H-${h.id}`,
       name: h.patient_name,
       type: h.patient_type || 'Walk-in',
       doctor_name: h.doctor_name,
       displayStatus: 'Consulted'
     })),
-    // Live Active Queue
     ...queue.map(q => ({
       id: q.id,
       name: q.name,
@@ -1365,10 +1335,9 @@ function ManagementAllPatientsView({ queue }: { queue: any[] }) {
     }))
   ];
 
-  const handleRequeue = async (p: any) => {
+  const handleRequeue = (p: any) => {
     const newQueue = queue.map(item => item.id === p.id ? { ...item, status: 'Waiting' } : item);
     setLocalData('hospital_queue', JSON.stringify(newQueue));
-    try { await supabase.from('hospital_queue').update({ status: 'Waiting' }).eq('id', p.id); } catch (e) { }
   };
 
   return (
@@ -1390,7 +1359,7 @@ function ManagementAllPatientsView({ queue }: { queue: any[] }) {
                 </tr>
               </thead>
               <tbody className="text-sm font-medium">
-                {allPatients.map(p => (
+                {allPatients.map((p: any) => (
                   <tr key={p.id} className="border-b border-slate-50 last:border-0 hover:bg-slate-50/50 transition-colors">
                     <td className="py-4 pl-2 font-bold text-slate-800">{p.name}</td>
                     <td className="py-4">
@@ -1482,7 +1451,7 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
   const handleNoShow = async (p: any) => {
     const newQueue = queue.map(item => item.id === p.id ? { ...item, status: 'No-Show' } : item);
     setLocalData('hospital_queue', JSON.stringify(newQueue));
-    try { await supabase.from('hospital_queue').update({ status: 'No-Show' }).eq('id', p.id); } catch (e) { }
+    
   };
 
   const handleAddQueue = async (e: React.FormEvent) => {
@@ -1516,7 +1485,7 @@ function ManagementDashboard({ onBack }: { onBack: () => void }) {
 
     setLocalData('hospital_queue', JSON.stringify(newQueue));
     try {
-      await supabase.from('hospital_queue').insert({ ...newPatient, type: 'Walk-in' });
+      
     } catch (e) { }
 
     setPhone("");
@@ -1818,7 +1787,6 @@ function DoctorDashboard({ onBack }: { onBack: () => void }) {
         newQueue[targetIndex].status = 'Consulting';
         setLocalData('hospital_queue', JSON.stringify(newQueue));
         try {
-          await supabase.from('hospital_queue').update({ status: 'Consulting' }).eq('id', activeQueue[0].id);
         } catch (e) { }
       }
     }
@@ -1832,11 +1800,15 @@ function DoctorDashboard({ onBack }: { onBack: () => void }) {
       const completedPatient = activeQueue[0];
 
       try {
-        await supabase.from('patient_history').insert({
-          patient_name: completedPatient.name,
-          doctor_name: completedPatient.doctor_name || 'Dr. Priya Sharma',
-          patient_type: completedPatient.type
-        });
+        const existingHistory = JSON.parse(localStorage.getItem('patient_history') || '[]');
+      const newEntry = {
+        id: Date.now(),
+        patient_name: completedPatient.name,
+        patient_type: completedPatient.type,
+        doctor_name: DOCTORS.find(d => d.id === selectedDoctor)?.name || 'Dr. Arjun Mehta',
+        completed_at: new Date().toISOString()
+      };
+      localStorage.setItem('patient_history', JSON.stringify([newEntry, ...existingHistory]));
       } catch (e) {
         console.warn("Could not write history log:", e);
       }
@@ -1844,7 +1816,7 @@ function DoctorDashboard({ onBack }: { onBack: () => void }) {
       const newQueue = queue.filter(q => q.id !== completedPatient.id);
       setLocalData('hospital_queue', JSON.stringify(newQueue));
 
-      try { await supabase.from('hospital_queue').delete().eq('id', completedPatient.id); } catch (e) { }
+      
     }
     setConsultationStart(null);
   };
@@ -2201,40 +2173,6 @@ export default function App() {
 
   useEffect(() => {
     initializeData();
-
-    // Set up Realtime Bi-directional Sync with App
-    let ignoreNextEvent = false;
-
-    const pullFromDb = async () => {
-      ignoreNextEvent = true;
-      try {
-        const { data: q } = await supabase.from('hospital_queue').select('*');
-        if (q) localStorage.setItem('hospital_queue', JSON.stringify(q));
-
-        const { data: s } = await supabase.from('app_state').select('*').single();
-        if (s) {
-          localStorage.setItem('current_avg_consultation', s.avg_time.toString());
-          localStorage.setItem('global_doctor_delay', s.global_delay.toString());
-        }
-        window.dispatchEvent(new Event('storage'));
-      } catch (err) { }
-      setTimeout(() => { ignoreNextEvent = false; }, 800);
-    };
-
-    pullFromDb();
-
-    const channel = supabase.channel('schema-db-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'hospital_queue' }, () => {
-        if (!ignoreNextEvent) pullFromDb();
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'app_state' }, () => {
-        if (!ignoreNextEvent) pullFromDb();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const goHome = () => setPage("landing");
@@ -2250,7 +2188,7 @@ export default function App() {
     window.dispatchEvent(new Event('storage'));
     setPage('patient-dashboard');
 
-    try { await supabase.from('hospital_queue').delete().eq('id', id); } catch (e) { }
+    
   };
 
   const handleRescheduleAppointment = (id: string) => {
@@ -2273,7 +2211,7 @@ export default function App() {
     }
     setReschedulingAppointment(null);
 
-    try { await supabase.from('hospital_queue').update({ scheduled: newTime }).eq('id', id); } catch (e) { }
+    
   };
 
   const isDarkPage = ['landing', 'patient-login', 'staff-login', 'doctor-login'].includes(page);

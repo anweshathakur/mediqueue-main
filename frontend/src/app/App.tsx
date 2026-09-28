@@ -83,9 +83,9 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-black text-white font-sans selection:bg-[#00e599] selection:text-black flex flex-col">
+    <div className="min-h-screen bg-[#07090e] text-white font-sans selection:bg-[#00e599] selection:text-black flex flex-col">
       {page !== "management-dashboard" && (
-        <Navbar onLogoClick={goHome} onNavigate={(p) => setPage(p as PageRoute)} />
+        <Navbar onLogoClick={goHome} currentPage={page} onNavigate={(p) => setPage(p as PageRoute)} />
       )}
 
       {page === "landing" && (

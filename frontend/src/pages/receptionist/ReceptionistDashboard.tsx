@@ -33,14 +33,14 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ on
           status: item.status || 'Waiting',
           doctor_name: item.doctor_name || 'Unassigned',
           department: item.department || 'General Medicine',
-          priority: Boolean(item.priority)
+          priority: Boolean(item.priority),
         }));
         setQueue(normalized);
         queueService.setLocalQueue(normalized);
         setIsLoading(false);
         return;
       }
-      throw new Error("Invalid response format");
+      throw new Error('Invalid response format');
     } catch (err) {
       const local = queueService.getLocalQueue();
       setQueue(local);
@@ -78,7 +78,9 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ on
   };
 
   const handleStatusChange = async (p: QueueItem, newStatus: string) => {
-    const updated = queue.map(item => (item.id === p.id || item.rawId === p.rawId) ? { ...item, status: newStatus as any } : item);
+    const updated = queue.map((item) =>
+      item.id === p.id || item.rawId === p.rawId ? { ...item, status: newStatus as any } : item
+    );
     setQueue(updated);
     queueService.setLocalQueue(updated);
 
@@ -86,7 +88,7 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ on
       const targetId = String(p.rawId || p.id);
       await walkInClient.updateStatus(targetId, newStatus);
     } catch (e) {
-      console.warn("Backend status update error:", e);
+      console.warn('Backend status update error:', e);
     }
   };
 
@@ -94,7 +96,7 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ on
     if (!window.confirm(`Are you sure you want to remove Token #${p.id} (${p.name}) from queue?`)) {
       return;
     }
-    const updated = queue.filter(item => item.id !== p.id && item.rawId !== p.rawId);
+    const updated = queue.filter((item) => item.id !== p.id && item.rawId !== p.rawId);
     setQueue(updated);
     queueService.setLocalQueue(updated);
 
@@ -102,7 +104,7 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ on
       const targetId = String(p.rawId || p.id);
       await walkInClient.deleteWalkIn(targetId);
     } catch (e) {
-      console.warn("Backend delete error:", e);
+      console.warn('Backend delete error:', e);
     }
   };
 
@@ -111,130 +113,130 @@ export const ReceptionistDashboard: React.FC<ReceptionistDashboardProps> = ({ on
   };
 
   return (
-    <div className="flex w-full min-h-screen bg-black text-white">
-      {/* Dark Cyber Sidebar */}
-      <div className="w-64 bg-[#080a0f] text-white flex flex-col border-r border-slate-800/80 z-20 sticky top-0 h-screen">
-        <div className="p-6 flex items-center gap-3 border-b border-slate-800/80">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-[#00e599]">
-            <Building2 className="w-6 h-6" />
-          </div>
-          <div>
-            <h1 className="text-base font-extrabold tracking-tight leading-tight">Receptionist<br /><span className="text-[#00e599]">Command Desk</span></h1>
-          </div>
-        </div>
-
-        <nav className="flex-1 px-3 space-y-1.5 mt-4">
-          <button
-            onClick={() => setTab('intake')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-              tab === 'intake' ? 'bg-[#131720] text-[#00e599] border border-slate-800 shadow-[0_0_20px_rgba(0,229,153,0.1)]' : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-            }`}
-          >
-            <ClipboardList className="w-4 h-4" /> Walk-In Intake
-          </button>
-          <button
-            onClick={() => setTab('queue')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-              tab === 'queue' ? 'bg-[#131720] text-[#00e599] border border-slate-800 shadow-[0_0_20px_rgba(0,229,153,0.1)]' : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-            }`}
-          >
-            <ListOrdered className="w-4 h-4" /> Live Queue
-          </button>
-          <button
-            onClick={() => setTab('all')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-              tab === 'all' ? 'bg-[#131720] text-[#00e599] border border-slate-800 shadow-[0_0_20px_rgba(0,229,153,0.1)]' : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-            }`}
-          >
-            <Users className="w-4 h-4" /> All Patients
-          </button>
-          <button
-            onClick={() => setTab('analytics')}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-xs transition-all cursor-pointer ${
-              tab === 'analytics' ? 'bg-[#131720] text-[#00e599] border border-slate-800 shadow-[0_0_20px_rgba(0,229,153,0.1)]' : 'text-slate-400 hover:bg-slate-900 hover:text-white'
-            }`}
-          >
-            <BarChart2 className="w-4 h-4" /> Analytics
-          </button>
-        </nav>
-
-        <div className="p-4 mt-auto border-t border-slate-800/80">
-          <button onClick={onBack} className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-950/20 hover:bg-red-950/40 text-red-400 rounded-xl font-bold text-xs transition-all border border-red-500/20 cursor-pointer">
-            <Lock className="w-4 h-4" /> Secure Logout
-          </button>
-        </div>
-      </div>
-
-      {/* Main Panel View */}
-      <main className="flex-1 flex flex-col h-screen overflow-hidden bg-black relative">
-        {/* Background Grid Pattern */}
-        <div 
-          className="absolute inset-0 pointer-events-none z-0" 
-          style={{
-            backgroundImage: `
-              linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-              linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
-            `,
-            backgroundSize: '48px 48px',
-          }}
-        />
-
-        {/* Top Header */}
-        <header className="bg-[#080a0f]/80 backdrop-blur-2xl border-b border-slate-800/80 px-8 py-5 flex items-center justify-between z-10 sticky top-0 shadow-sm">
-          <div>
-            <h2 className="text-xl font-extrabold text-white tracking-tight">
-              {tab === 'intake' && 'Walk-In Intake'}
-              {tab === 'queue' && 'Live Queue Management'}
-              {tab === 'all' && 'All Patient Records'}
-              {tab === 'analytics' && 'Operational Analytics'}
-            </h2>
-            <p className="text-xs font-semibold text-slate-400">
-              {tab === 'intake' && 'Register new walk-in patient and assign instantaneous queue token'}
-              {tab === 'queue' && 'Live queue orchestration, patient status updates, and call routing'}
-              {tab === 'all' && 'Aggregated history of active and completed patient consultations'}
-              {tab === 'analytics' && 'Real-time patient throughput, department workload, and velocity metrics'}
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="px-3.5 py-1.5 bg-emerald-950/60 text-[#00e599] border border-emerald-500/30 rounded-xl text-xs font-extrabold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#00e599] animate-pulse"></span>
-              {queue.filter(q => q.status !== 'No-Show').length} Active in Queue
+    <div className="flex w-full min-h-[calc(100vh-64px)] bg-[#07090e] text-white font-sans">
+      {/* Left Sidebar */}
+      <aside className="w-60 bg-[#080b12] text-white flex flex-col justify-between border-r border-slate-800/80 p-4 shrink-0">
+        <div className="space-y-6">
+          <div className="flex items-center gap-2.5 px-2 pt-2">
+            <div className="w-7 h-7 rounded-md bg-[#00e599]/10 border border-[#00e599]/30 flex items-center justify-center text-[#00e599]">
+              <Building2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h1 className="text-sm font-bold text-white tracking-tight">Reception Desk</h1>
+              <p className="text-[10px] text-slate-400 font-medium">Station Kiosk #01</p>
             </div>
           </div>
-        </header>
 
-        {/* Content Area */}
-        <div className="p-8 overflow-y-auto flex-1 relative z-10">
+          <nav className="space-y-1">
+            <button
+              onClick={() => setTab('intake')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${
+                tab === 'intake'
+                  ? 'bg-[#0f1523] text-[#00e599] border-l-2 border-[#00e599]'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <ClipboardList className="w-4 h-4" />
+              <span>Walk-In Intake</span>
+            </button>
+
+            <button
+              onClick={() => setTab('queue')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${
+                tab === 'queue'
+                  ? 'bg-[#0f1523] text-[#00e599] border-l-2 border-[#00e599]'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <ListOrdered className="w-4 h-4" />
+              <span>Live Queue</span>
+            </button>
+
+            <button
+              onClick={() => setTab('all')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${
+                tab === 'all'
+                  ? 'bg-[#0f1523] text-[#00e599] border-l-2 border-[#00e599]'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <Users className="w-4 h-4" />
+              <span>All Patients</span>
+            </button>
+
+            <button
+              onClick={() => setTab('analytics')}
+              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-xs font-semibold transition-colors cursor-pointer text-left ${
+                tab === 'analytics'
+                  ? 'bg-[#0f1523] text-[#00e599] border-l-2 border-[#00e599]'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/40'
+              }`}
+            >
+              <BarChart2 className="w-4 h-4" />
+              <span>Analytics</span>
+            </button>
+          </nav>
+        </div>
+
+        <div className="pt-4 border-t border-slate-800/80">
+          <button
+            onClick={onBack}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-[#0c1017] hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-md text-xs font-semibold border border-slate-800 hover:border-red-500/30 transition-colors cursor-pointer"
+          >
+            <Lock className="w-3.5 h-3.5" /> Secure Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main View Area */}
+      <main className="flex-1 p-8 overflow-y-auto max-w-7xl">
+        {/* Top Section Header */}
+        <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-8 pb-4 border-b border-slate-800/80">
+          <div>
+            <h2 className="text-2xl font-bold text-white tracking-tight">
+              {tab === 'intake' && 'Walk-In Patient Intake'}
+              {tab === 'queue' && 'Live Master Queue Orchestration'}
+              {tab === 'all' && 'All Patient Consult History'}
+              {tab === 'analytics' && 'Operational Throughput Analytics'}
+            </h2>
+            <p className="text-xs text-slate-400 mt-1">
+              {tab === 'intake' && 'Register incoming walk-in patients and assign instantaneous priority tokens.'}
+              {tab === 'queue' && 'Real-time multi-doctor queue tracking, room routing, and patient notifications.'}
+              {tab === 'all' && 'Aggregated logs of all patient consultations, arrival times, and medical departments.'}
+              {tab === 'analytics' && 'Live metrics on waiting times, room utilization, and clinic velocity.'}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="px-3 py-1.5 bg-[#00e599]/10 text-[#00e599] border border-[#00e599]/30 rounded-md text-xs font-bold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#00e599] animate-pulse"></span>
+              {queue.filter((q) => q.status !== 'No-Show').length} Active in Queue
+            </span>
+          </div>
+        </div>
+
+        {/* View Contents */}
+        <div>
           {tab === 'intake' && (
-            <div className="max-w-2xl mx-auto py-4">
+            <div className="max-w-xl">
               <WalkInIntake onWalkInAdded={handleWalkInAdded} />
             </div>
           )}
 
           {tab === 'queue' && (
-            <div className="w-full">
-              <LiveMasterQueue
-                queue={queue}
-                isLoading={isLoading}
-                onRefresh={syncQueue}
-                onStatusChange={handleStatusChange}
-                onDelete={handleDelete}
-                onPing={handlePing}
-              />
-            </div>
+            <LiveMasterQueue
+              queue={queue}
+              isLoading={isLoading}
+              onRefresh={syncQueue}
+              onStatusChange={handleStatusChange}
+              onDelete={handleDelete}
+              onPing={handlePing}
+            />
           )}
 
-          {tab === 'all' && (
-            <div className="w-full">
-              <AllPatientsView queue={queue} />
-            </div>
-          )}
+          {tab === 'all' && <AllPatientsView queue={queue} />}
 
-          {tab === 'analytics' && (
-            <div className="w-full">
-              <AnalyticsView />
-            </div>
-          )}
+          {tab === 'analytics' && <AnalyticsView />}
         </div>
       </main>
     </div>

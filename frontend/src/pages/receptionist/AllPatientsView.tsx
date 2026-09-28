@@ -1,5 +1,5 @@
 import React from 'react';
-import { Users, CheckCircle2 } from 'lucide-react';
+import { Users } from 'lucide-react';
 import { QueueItem } from '../../types';
 import { queueService } from '../../services/queueService';
 
@@ -17,61 +17,72 @@ export const AllPatientsView: React.FC<AllPatientsViewProps> = ({ queue }) => {
       type: h.patient_type || 'Walk-in',
       doctor_name: h.doctor_name,
       displayStatus: 'Consulted',
-      isHistory: true
+      isHistory: true,
     })),
-    ...queue.map(q => ({
+    ...queue.map((q) => ({
       id: q.id,
       name: q.name,
       type: q.type,
       doctor_name: q.doctor_name,
-      displayStatus: q.status === 'Consulting' ? 'In Room' : q.status === 'No-Show' ? 'No-Show' : q.scheduled,
+      displayStatus:
+        q.status === 'Consulting'
+          ? 'In Room'
+          : q.status === 'No-Show'
+          ? 'No-Show'
+          : q.scheduled,
       isHistory: false,
-      raw: q
-    }))
+      raw: q,
+    })),
   ];
 
   return (
-    <div className="lg:col-span-12 bg-[#0b0d12] rounded-3xl p-8 border border-slate-800/80 shadow-2xl">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-[#00e599]">
-          <Users className="w-6 h-6" />
+    <div className="bg-[#0c1017] rounded-lg p-6 border border-slate-800 font-sans">
+      <div className="flex items-center gap-3 mb-6 pb-3 border-b border-slate-800/80">
+        <div className="w-9 h-9 rounded-md bg-[#00e599]/10 border border-[#00e599]/30 flex items-center justify-center text-[#00e599]">
+          <Users className="w-5 h-5" />
         </div>
         <div>
-          <h3 className="text-lg font-extrabold text-white">All Patients Roster</h3>
-          <p className="text-xs font-semibold text-slate-400">Aggregated Master Record of Live and Past Consultations</p>
+          <h3 className="text-base font-bold text-white">All Patients Roster</h3>
+          <p className="text-[11px] text-slate-400">Aggregated Master Record of Live and Past Consultations</p>
         </div>
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left">
+        <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-slate-800 text-xs font-bold text-slate-500 uppercase tracking-wider">
-              <th className="pb-3 pl-2">Patient</th>
-              <th className="pb-3">Type</th>
-              <th className="pb-3">Doctor</th>
-              <th className="pb-3 text-right pr-2">Status</th>
+            <tr className="border-b border-slate-800 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+              <th className="pb-2.5 pl-2">Patient</th>
+              <th className="pb-2.5">Type</th>
+              <th className="pb-2.5">Doctor</th>
+              <th className="pb-2.5 text-right pr-2">Status</th>
             </tr>
           </thead>
-          <tbody className="text-xs divide-y divide-slate-800/50 font-medium">
+          <tbody className="divide-y divide-slate-800/60 font-medium">
             {all.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-900/30 transition-colors">
-                <td className="py-4 pl-2 font-bold text-white text-sm">{p.name}</td>
-                <td className="py-4">
-                  <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-bold ${
-                    p.type === 'Online' ? 'bg-blue-950/60 text-blue-400 border border-blue-500/30' : 'bg-slate-900 text-slate-300 border border-slate-800'
-                  }`}>
+              <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
+                <td className="py-3.5 pl-2 font-bold text-white">{p.name}</td>
+                <td className="py-3.5">
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${
+                      p.type === 'Online'
+                        ? 'bg-blue-950/60 text-blue-400 border-blue-500/30'
+                        : 'bg-slate-900 text-slate-300 border-slate-800'
+                    }`}
+                  >
                     {p.type}
                   </span>
                 </td>
-                <td className="py-4 text-slate-400">{p.doctor_name || 'Unassigned'}</td>
-                <td className="py-4 text-right pr-2">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-extrabold ${
-                    p.displayStatus === 'Consulted' 
-                      ? 'bg-slate-900 text-slate-400 border border-slate-800'
-                      : p.displayStatus === 'In Room'
-                      ? 'bg-emerald-950/60 text-[#00e599] border border-emerald-500/30 animate-pulse'
-                      : 'bg-slate-800 text-white'
-                  }`}>
+                <td className="py-3.5 text-slate-300">{p.doctor_name || 'Unassigned'}</td>
+                <td className="py-3.5 text-right pr-2">
+                  <span
+                    className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold border ${
+                      p.displayStatus === 'Consulted'
+                        ? 'bg-slate-900 text-slate-400 border-slate-800'
+                        : p.displayStatus === 'In Room'
+                        ? 'bg-emerald-950/60 text-[#00e599] border-emerald-500/30'
+                        : 'bg-slate-800 text-white border-slate-700'
+                    }`}
+                  >
                     {p.displayStatus}
                   </span>
                 </td>

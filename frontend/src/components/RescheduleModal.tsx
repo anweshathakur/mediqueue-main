@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Clock, CalendarDays } from 'lucide-react';
+import { X, Clock } from 'lucide-react';
 
 interface RescheduleModalProps {
   appointment: any;
@@ -8,42 +8,45 @@ interface RescheduleModalProps {
 }
 
 export const RescheduleModal: React.FC<RescheduleModalProps> = ({ appointment, onClose, onConfirm }) => {
-  const [selectedTime, setSelectedTime] = useState(appointment?.scheduled || '3:30 PM');
-  const SLOTS = ['02:00 PM', '02:30 PM', '03:00 PM', '03:30 PM', '04:00 PM', '04:30 PM', '05:00 PM'];
+  const [selectedTime, setSelectedTime] = useState(appointment?.scheduled || '03:30 PM');
+  const SLOTS = ['09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="bg-[#0b0d12] border border-slate-800 rounded-3xl p-8 max-w-md w-full shadow-2xl relative">
-        <button onClick={onClose} className="absolute right-6 top-6 p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/80 transition-colors">
-          <X className="w-5 h-5" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 font-sans">
+      <div className="bg-[#0c1017] border border-slate-800 rounded-lg p-6 max-w-md w-full shadow-2xl relative">
+        <button
+          onClick={onClose}
+          className="absolute right-4 top-4 p-1.5 rounded-md text-slate-400 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+        >
+          <X className="w-4 h-4" />
         </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-            <Clock className="w-6 h-6" />
+        <div className="flex items-center gap-3 mb-5 pb-3 border-b border-slate-800/80">
+          <div className="w-8 h-8 rounded-md bg-[#00e599]/10 border border-[#00e599]/30 flex items-center justify-center text-[#00e599]">
+            <Clock className="w-4 h-4" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white">Reschedule Visit</h3>
-            <p className="text-xs text-slate-400">Select an updated consultation slot</p>
+            <h3 className="text-base font-bold text-white">Reschedule Visit</h3>
+            <p className="text-[11px] text-slate-400">Select an updated consultation slot</p>
           </div>
         </div>
 
-        <p className="text-sm text-slate-300 mb-4 font-semibold">
-          Patient: <span className="text-[#00e599]">{appointment?.name}</span> (#{appointment?.id})
+        <p className="text-xs text-slate-300 mb-4 font-medium">
+          Patient: <span className="text-white font-bold">{appointment?.name || 'Patient'}</span> (#{appointment?.id || 'apt'})
         </p>
 
         <div className="space-y-2 mb-6">
-          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Available Slots Today</label>
+          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Available Consultation Slots</label>
           <div className="grid grid-cols-2 gap-2 max-h-48 overflow-y-auto">
             {SLOTS.map((slot) => (
               <button
                 key={slot}
                 type="button"
                 onClick={() => setSelectedTime(slot)}
-                className={`py-2.5 px-3 rounded-xl text-xs font-bold transition-all border ${
+                className={`py-2 px-3 rounded-md text-xs font-semibold transition-colors border cursor-pointer ${
                   selectedTime === slot
-                    ? 'bg-[#00e599] text-black border-[#00e599] shadow-[0_0_15px_rgba(0,229,153,0.3)]'
-                    : 'bg-[#131720] text-slate-300 border-slate-800 hover:border-slate-700 hover:text-white'
+                    ? 'bg-[#00e599] text-black border-[#00e599]'
+                    : 'bg-[#07090e] text-slate-300 border-slate-700 hover:border-slate-600 hover:text-white'
                 }`}
               >
                 {slot}
@@ -52,16 +55,16 @@ export const RescheduleModal: React.FC<RescheduleModalProps> = ({ appointment, o
           </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2 pt-2 border-t border-slate-800/80">
           <button
             onClick={onClose}
-            className="flex-1 py-3 rounded-xl border border-slate-800 bg-[#131720] text-slate-400 hover:text-white font-bold text-sm transition-colors cursor-pointer"
+            className="flex-1 py-2 rounded-md border border-slate-700 bg-[#07090e] text-slate-300 hover:text-white font-semibold text-xs transition-colors cursor-pointer"
           >
             Cancel
           </button>
           <button
             onClick={() => onConfirm(selectedTime)}
-            className="flex-1 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-sm transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer"
+            className="flex-1 py-2 rounded-md bg-[#00e599] hover:bg-[#00c985] text-black font-bold text-xs transition-colors cursor-pointer"
           >
             Confirm Slot
           </button>

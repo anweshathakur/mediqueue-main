@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { User, Stethoscope, Building2, Activity, ArrowRight, ShieldCheck, Clock, CheckCircle2 } from 'lucide-react';
+import { useTheme } from '../context/ThemeContext';
 
 interface LandingPageProps {
   onNavigate: (page: string) => void;
@@ -25,16 +26,17 @@ const itemVariants = {
 };
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
+  const { isDark } = useTheme();
+
   return (
-    <div className="bg-black min-h-screen text-white pb-32 overflow-hidden relative">
-      {/* Checkered Grid Background */}
+    <div className={`${isDark ? 'bg-[#07090e] text-white' : 'bg-[#f8fafc] text-slate-900'} min-h-screen pb-32 overflow-hidden relative transition-colors duration-200`}>
+      {/* Grid Background */}
       <div 
-        className="absolute inset-0 pointer-events-none z-0" 
+        className="absolute inset-0 pointer-events-none z-0 opacity-40" 
         style={{
-          backgroundImage: `
-            linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)
-          `,
+          backgroundImage: isDark
+            ? `linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(255, 255, 255, 0.05) 1px, transparent 1px)`
+            : `linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px)`,
           backgroundSize: '48px 48px',
         }}
       />
@@ -77,8 +79,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         {/* Portals Section */}
         <section id="portals" className="mb-36 relative z-10">
           <div className="text-center mb-12">
-            <h3 className="text-2xl font-extrabold text-white mb-2">Hospital Access Portals</h3>
-            <p className="text-xs font-semibold text-slate-400">Choose your authorized console to proceed</p>
+            <h3 className={`text-2xl font-extrabold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Hospital Access Portals</h3>
+            <p className={`text-xs font-semibold ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Choose your authorized console to proceed</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
@@ -86,16 +88,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <motion.div
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
               onClick={() => onNavigate("patient-login")}
-              className="bg-[#0b0d12] border border-slate-800/80 rounded-3xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_30px_rgba(0,229,153,0.12)] group"
+              className={`border rounded-xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 ${
+                isDark 
+                  ? 'bg-[#0c1017] border-slate-800/90 hover:border-[#00e599]/40 hover:shadow-[0_0_30px_rgba(0,229,153,0.12)]' 
+                  : 'bg-white border-slate-200 hover:border-emerald-400 shadow-sm hover:shadow-md'
+              } group`}
             >
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6 group-hover:border-[#00e599]/50 transition-colors">
-                <User className="w-7 h-7 text-[#00e599]" />
+              <div className={`w-14 h-14 rounded-lg border flex items-center justify-center mb-6 transition-colors ${
+                isDark ? 'bg-slate-900 border-slate-800 group-hover:border-[#00e599]/50' : 'bg-emerald-50 border-emerald-200 group-hover:border-emerald-400'
+              }`}>
+                <User className="w-7 h-7 text-[#00c985]" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-1.5">Patient Portal</h3>
-              <p className="text-slate-400 text-xs leading-relaxed mb-6 font-medium">
+              <h3 className={`text-xl font-bold mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>Patient Portal</h3>
+              <p className={`text-xs leading-relaxed mb-6 font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 Book doctor appointments, view live queue progression, and track estimated consultation timing.
               </p>
-              <span className="mt-auto text-xs font-bold text-[#00e599] flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+              <span className="mt-auto text-xs font-bold text-[#00c985] flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
                 Sign In / Register <ArrowRight className="w-4 h-4" />
               </span>
             </motion.div>
@@ -104,16 +112,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <motion.div
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
               onClick={() => onNavigate("staff-login")}
-              className="bg-[#0b0d12] border border-slate-800/80 rounded-3xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_30px_rgba(0,229,153,0.12)] group"
+              className={`border rounded-xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 ${
+                isDark 
+                  ? 'bg-[#0c1017] border-slate-800/90 hover:border-[#00e599]/40 hover:shadow-[0_0_30px_rgba(0,229,153,0.12)]' 
+                  : 'bg-white border-slate-200 hover:border-emerald-400 shadow-sm hover:shadow-md'
+              } group`}
             >
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6 group-hover:border-[#00e599]/50 transition-colors">
-                <Building2 className="w-7 h-7 text-[#00e599]" />
+              <div className={`w-14 h-14 rounded-lg border flex items-center justify-center mb-6 transition-colors ${
+                isDark ? 'bg-slate-900 border-slate-800 group-hover:border-[#00e599]/50' : 'bg-emerald-50 border-emerald-200 group-hover:border-emerald-400'
+              }`}>
+                <Building2 className="w-7 h-7 text-[#00c985]" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-1.5">Receptionist Desk</h3>
-              <p className="text-slate-400 text-xs leading-relaxed mb-6 font-medium">
+              <h3 className={`text-xl font-bold mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>Receptionist Desk</h3>
+              <p className={`text-xs leading-relaxed mb-6 font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 Manage live walk-in registry, issue emergency tokens, update queue status, and orchestrate patient throughput.
               </p>
-              <span className="mt-auto text-xs font-bold text-[#00e599] flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+              <span className="mt-auto text-xs font-bold text-[#00c985] flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
                 Open Command Desk <ArrowRight className="w-4 h-4" />
               </span>
             </motion.div>
@@ -122,16 +136,22 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
             <motion.div
               whileHover={{ y: -6, transition: { duration: 0.2 } }}
               onClick={() => onNavigate("doctor-login")}
-              className="bg-[#0b0d12] border border-slate-800/80 rounded-3xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 hover:border-[#00e599]/40 hover:shadow-[0_0_30px_rgba(0,229,153,0.12)] group"
+              className={`border rounded-xl p-8 flex flex-col items-start cursor-pointer transition-all duration-300 ${
+                isDark 
+                  ? 'bg-[#0c1017] border-slate-800/90 hover:border-[#00e599]/40 hover:shadow-[0_0_30px_rgba(0,229,153,0.12)]' 
+                  : 'bg-white border-slate-200 hover:border-emerald-400 shadow-sm hover:shadow-md'
+              } group`}
             >
-              <div className="w-14 h-14 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center mb-6 group-hover:border-[#00e599]/50 transition-colors">
-                <Stethoscope className="w-7 h-7 text-[#00e599]" />
+              <div className={`w-14 h-14 rounded-lg border flex items-center justify-center mb-6 transition-colors ${
+                isDark ? 'bg-slate-900 border-slate-800 group-hover:border-[#00e599]/50' : 'bg-emerald-50 border-emerald-200 group-hover:border-emerald-400'
+              }`}>
+                <Stethoscope className="w-7 h-7 text-[#00c985]" />
               </div>
-              <h3 className="text-xl font-bold text-white mb-1.5">Doctor Console</h3>
-              <p className="text-slate-400 text-xs leading-relaxed mb-6 font-medium">
+              <h3 className={`text-xl font-bold mb-1.5 ${isDark ? 'text-white' : 'text-slate-900'}`}>Doctor Console</h3>
+              <p className={`text-xs leading-relaxed mb-6 font-medium ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>
                 Call patients to consultation room, monitor elapsed time, and dynamically manage clinical delay adjustments.
               </p>
-              <span className="mt-auto text-xs font-bold text-[#00e599] flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
+              <span className="mt-auto text-xs font-bold text-[#00c985] flex items-center gap-1.5 group-hover:translate-x-1 transition-transform">
                 Doctor Sign In <ArrowRight className="w-4 h-4" />
               </span>
             </motion.div>
@@ -139,26 +159,26 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </section>
 
         {/* Problem Statement Section */}
-        <section id="problem" className="mb-36 relative z-10 border-t border-slate-800/80 pt-20">
+        <section id="problem" className={`mb-36 relative z-10 border-t pt-20 ${isDark ? 'border-slate-800/80' : 'border-slate-200'}`}>
           <div className="max-w-3xl mb-12">
-            <span className="text-[#00e599] text-xs font-extrabold tracking-widest uppercase">The Clinical Challenge</span>
-            <h3 className="text-3xl md:text-4xl font-extrabold text-white mt-2">Traditional waiting rooms fail patients and physicians.</h3>
+            <span className="text-[#00c985] text-xs font-extrabold tracking-widest uppercase">The Clinical Challenge</span>
+            <h3 className={`text-3xl md:text-4xl font-extrabold mt-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Traditional waiting rooms fail patients and physicians.</h3>
           </div>
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-[#0b0d12] p-6 rounded-2xl border border-slate-800">
+            <div className={`p-6 rounded-xl border ${isDark ? 'bg-[#0c1017] border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
               <Clock className="w-6 h-6 text-red-400 mb-4" />
-              <h4 className="text-base font-bold text-white mb-2">Uncertain Wait Times</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">Patients sit in crowded lobbies without knowing when they will actually be called in.</p>
+              <h4 className={`text-base font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Uncertain Wait Times</h4>
+              <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>Patients sit in crowded lobbies without knowing when they will actually be called in.</p>
             </div>
-            <div className="bg-[#0b0d12] p-6 rounded-2xl border border-slate-800">
+            <div className={`p-6 rounded-xl border ${isDark ? 'bg-[#0c1017] border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
               <Activity className="w-6 h-6 text-amber-400 mb-4" />
-              <h4 className="text-base font-bold text-white mb-2">Delay Cascades</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">A single delayed consultation throws the entire day's schedule off without warning downstream patients.</p>
+              <h4 className={`text-base font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Delay Cascades</h4>
+              <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>A single delayed consultation throws the entire day's schedule off without warning downstream patients.</p>
             </div>
-            <div className="bg-[#0b0d12] p-6 rounded-2xl border border-slate-800">
-              <ShieldCheck className="w-6 h-6 text-[#00e599] mb-4" />
-              <h4 className="text-base font-bold text-white mb-2">Smart Auto-Balancing</h4>
-              <p className="text-xs text-slate-400 leading-relaxed">MediQueue automatically updates countdowns, recalculates arrival ETAs, and routes emergencies seamlessly.</p>
+            <div className={`p-6 rounded-xl border ${isDark ? 'bg-[#0c1017] border-slate-800' : 'bg-white border-slate-200 shadow-xs'}`}>
+              <ShieldCheck className="w-6 h-6 text-[#00c985] mb-4" />
+              <h4 className={`text-base font-bold mb-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>Smart Auto-Balancing</h4>
+              <p className={`text-xs leading-relaxed ${isDark ? 'text-slate-400' : 'text-slate-600'}`}>MediQueue automatically updates countdowns, recalculates arrival ETAs, and routes emergencies seamlessly.</p>
             </div>
           </div>
         </section>

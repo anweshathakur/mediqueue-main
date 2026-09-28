@@ -17,6 +17,7 @@ import { ReceptionistDashboard } from "../pages/receptionist/ReceptionistDashboa
 import { queueService } from "../services/queueService";
 import { appointmentClient } from "../services/appointmentService";
 import { QueueItem } from "../types";
+import { useTheme } from "../context/ThemeContext";
 
 
 export type PageRoute = 
@@ -31,6 +32,7 @@ export type PageRoute =
   | "doctor-dashboard";
 
 export default function App() {
+  const { isDark } = useTheme();
   const [page, setPage] = useState<PageRoute>("landing");
   const [currentUserEmail, setCurrentUserEmail] = useState("");
   const [trackingAppointment, setTrackingAppointment] = useState<QueueItem | null>(null);
@@ -83,7 +85,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#07090e] text-white font-sans selection:bg-[#00e599] selection:text-black flex flex-col">
+    <div className={`min-h-screen ${isDark ? 'bg-[#07090e] text-white' : 'bg-[#f8fafc] text-slate-900'} font-sans selection:bg-[#00e599] selection:text-black flex flex-col transition-colors duration-200`}>
       {page !== "management-dashboard" && (
         <Navbar onLogoClick={goHome} currentPage={page} onNavigate={(p) => setPage(p as PageRoute)} />
       )}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Activity, Clock, Users, Play, AlertCircle, ArrowLeft, Bell, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { Stethoscope, Activity, Clock, Users, Play, AlertCircle, ArrowLeft, Bell, CheckCircle2, ShieldAlert, UserCheck } from 'lucide-react';
 import { DOCTORS } from '../../types';
 import { walkInClient, BackendQueueItem } from '../../services/walkInService';
 import { queueService } from '../../services/queueService';
@@ -16,8 +16,11 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  const [consultationStart, setConsultationStart] = useState<number | null>(null);
+  const [localStartTime, setLocalStartTime] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
+
+  // Active consulting item (if any)
+  const consultingItem = queue.find(q => q.status === 'consulting');
 
   // Fetch real queue from backend
   const fetchQueue = async () => {
@@ -26,11 +29,6 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
       const data = await walkInClient.getDoctorQueue(selectedDoctor);
       if (Array.isArray(data)) {
         setQueue(data);
-        // If there's an active consultation already, sync timer
-        const consultingItem = data.find(q => q.status === 'consulting');
-        if (consultingItem && !consultationStart) {
-          setConsultationStart(Date.now());
-        }
       }
     } catch (err) {
       console.warn("Error fetching doctor queue:", err);
@@ -41,25 +39,38 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
 
   useEffect(() => {
     fetchQueue();
-    const interval = setInterval(fetchQueue, 4000);
+    const interval = setInterval(fetchQueue, 3000);
     return () => clearInterval(interval);
   }, [selectedDoctor]);
 
+  // Robust live timer calculation based on backend started_at or local start
   useEffect(() => {
-    let timer: any;
-    if (consultationStart) {
-      timer = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - consultationStart) / 1000));
-      }, 1000);
-    } else {
+    if (!consultingItem) {
       setElapsed(0);
+      return;
     }
+
+    // Determine the true start timestamp
+    const startMs = consultingItem.started_at 
+      ? new Date(consultingItem.started_at).getTime() 
+      : (localStartTime || Date.now());
+
+    const updateTimer = () => {
+      const now = Date.now();
+      const diffSecs = Math.max(0, Math.floor((now - startMs) / 1000));
+      setElapsed(diffSecs);
+    };
+
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
+
     return () => clearInterval(timer);
-  }, [consultationStart]);
+  }, [consultingItem?.id, consultingItem?.status, consultingItem?.started_at, localStartTime]);
 
   // Current patient is the first active (consulting/called/waiting)
   const currentPatient = queue[0];
   const upcomingQueue = queue.slice(1);
+  const waitingCount = queue.filter(q => q.status === 'waiting' || q.status === 'called').length;
 
   // Action: Call Next Patient (waiting -> called)
   const handleCall = async (item: BackendQueueItem) => {
@@ -78,7 +89,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
   const handleStart = async (item: BackendQueueItem) => {
     try {
       setActionLoading(true);
-      setConsultationStart(Date.now());
+      const now = Date.now();
+      setLocalStartTime(now);
       await walkInClient.startConsultation(item.id);
       await fetchQueue();
     } catch (err: any) {
@@ -97,7 +109,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
       setAvgTime(minutesSpent);
 
       await walkInClient.completeConsultation(item.id);
-      setConsultationStart(null);
+      setLocalStartTime(null);
       setElapsed(0);
       await fetchQueue();
     } catch (err: any) {
@@ -114,9 +126,16 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
   };
 
   const formatSeconds = (secs: number) => {
-    const m = Math.floor(secs / 60);
+    const hours = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
     const s = secs % 60;
-    return `${m}:${s < 10 ? '0' : ''}${s}`;
+    const mm = m < 10 ? `0${m}` : `${m}`;
+    const ss = s < 10 ? `0${s}` : `${s}`;
+    if (hours > 0) {
+      const hh = hours < 10 ? `0${hours}` : `${hours}`;
+      return `${hh}:${mm}:${ss}`;
+    }
+    return `${mm}:${ss}`;
   };
 
   return (
@@ -145,7 +164,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
             value={selectedDoctor}
             onChange={(e) => {
               setSelectedDoctor(Number(e.target.value));
-              setConsultationStart(null);
+              setLocalStartTime(null);
             }}
             className="px-4 py-2.5 rounded-xl bg-[#131720] border border-slate-800 text-white font-bold text-xs focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 cursor-pointer"
           >
@@ -158,18 +177,30 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-6 mb-8 relative z-10">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 mb-8 relative z-10">
         <div className="bg-[#0b0d12] rounded-2xl p-6 border border-slate-800/80 shadow-2xl">
           <div className="flex justify-between items-start mb-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Queue</h3>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Waiting Patients</h3>
             <div className="w-8 h-8 rounded-lg bg-[#00e599]/10 flex items-center justify-center text-[#00e599]"><Users className="w-4 h-4" /></div>
           </div>
-          <p className="text-3xl font-extrabold text-[#00e599]">{queue.length}</p>
+          <p className="text-3xl font-extrabold text-[#00e599]">{waitingCount}</p>
         </div>
 
         <div className="bg-[#0b0d12] rounded-2xl p-6 border border-slate-800/80 shadow-2xl">
           <div className="flex justify-between items-start mb-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Avg. Consultation</h3>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">In Room</h3>
+            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${consultingItem ? 'bg-emerald-500/20 text-[#00e599]' : 'bg-slate-800 text-slate-400'}`}>
+              <UserCheck className="w-4 h-4" />
+            </div>
+          </div>
+          <p className={`text-3xl font-extrabold ${consultingItem ? 'text-[#00e599]' : 'text-slate-500'}`}>
+            {consultingItem ? '1 Active' : '0 Idle'}
+          </p>
+        </div>
+
+        <div className="bg-[#0b0d12] rounded-2xl p-6 border border-slate-800/80 shadow-2xl">
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Avg. Target</h3>
             <div className="w-8 h-8 rounded-lg bg-[#131720] flex items-center justify-center text-slate-300"><Clock className="w-4 h-4" /></div>
           </div>
           <p className="text-3xl font-extrabold text-white">{avgTime}m</p>
@@ -191,9 +222,9 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
           <div className="bg-[#0b0d12] rounded-3xl p-8 border border-slate-800/80 shadow-2xl relative overflow-hidden">
             <div className="flex justify-between items-start mb-6">
               <span className="text-xs font-extrabold uppercase tracking-widest text-[#00e599] flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-[#00e599] animate-pulse"></span>
+                <span className={`w-2.5 h-2.5 rounded-full ${currentPatient?.status === 'consulting' ? 'bg-[#00e599] animate-ping' : 'bg-[#00e599]'}`}></span>
                 {currentPatient?.status === 'consulting'
-                  ? 'Active Patient In Room'
+                  ? 'Active Patient In Consultation'
                   : currentPatient?.status === 'called'
                   ? 'Patient Called to Consultation Room'
                   : 'Next Patient in Queue'}
@@ -232,12 +263,12 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
 
                 <div className="p-5 rounded-2xl bg-[#131720] border border-slate-800 flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3">
-                    <Clock className="w-6 h-6 text-[#00e599]" />
+                    <Clock className={`w-7 h-7 ${currentPatient.status === 'consulting' ? 'text-[#00e599] animate-pulse' : 'text-slate-400'}`} />
                     <div>
                       <p className="text-xs text-slate-400 font-bold">
-                        {currentPatient.status === 'consulting' ? 'Active Consultation Duration' : 'Estimated Consultation Target'}
+                        {currentPatient.status === 'consulting' ? 'Live Consultation Timer' : 'Estimated Consultation Target'}
                       </p>
-                      <p className="text-2xl font-black text-white">
+                      <p className={`text-3xl font-black font-mono tracking-tight ${currentPatient.status === 'consulting' ? 'text-[#00e599]' : 'text-white'}`}>
                         {currentPatient.status === 'consulting' ? formatSeconds(elapsed) : `${avgTime} mins`}
                       </p>
                     </div>
@@ -249,7 +280,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
                       <button
                         onClick={() => handleComplete(currentPatient)}
                         disabled={actionLoading}
-                        className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-2"
+                        className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-2 active:scale-95"
                       >
                         <CheckCircle2 className="w-4 h-4" /> Complete Consultation
                       </button>
@@ -257,7 +288,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
                       <button
                         onClick={() => handleStart(currentPatient)}
                         disabled={actionLoading}
-                        className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-2"
+                        className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-2 active:scale-95"
                       >
                         <Play className="w-3.5 h-3.5 fill-black" /> Begin Consultation
                       </button>
@@ -266,14 +297,14 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
                         <button
                           onClick={() => handleCall(currentPatient)}
                           disabled={actionLoading}
-                          className="px-5 py-3 rounded-xl bg-[#131720] hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                          className="px-5 py-3 rounded-xl bg-[#131720] hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 active:scale-95"
                         >
                           <Bell className="w-3.5 h-3.5 text-amber-400" /> Call Patient
                         </button>
                         <button
                           onClick={() => handleStart(currentPatient)}
                           disabled={actionLoading}
-                          className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-1.5"
+                          className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-1.5 active:scale-95"
                         >
                           <Play className="w-3.5 h-3.5 fill-black" /> Begin Consultation
                         </button>
@@ -403,4 +434,3 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
     </main>
   );
 };
-

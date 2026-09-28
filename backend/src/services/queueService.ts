@@ -15,6 +15,7 @@ export interface QueueItemResponse {
   status: "waiting" | "called" | "consulting" | "completed" | "no_show" | "cancelled";
   joined_at: string;
   called_at?: string | null;
+  started_at?: string | null;
   completed_at?: string | null;
 }
 
@@ -85,6 +86,7 @@ export class QueueService {
       status: entry.status,
       joined_at: entry.joined_at,
       called_at: entry.called_at,
+      started_at: entry.started_at,
       completed_at: entry.completed_at,
     }));
   }
@@ -108,9 +110,9 @@ export class QueueService {
       throw new Error(`Queue entry ${queueEntryId} not found`);
     }
 
-    const updatedQueueEntry = await queueRepository.updateStatus(queueEntryId, "consulting");
-
     const started_at = new Date().toISOString();
+    const updatedQueueEntry = await queueRepository.updateStatus(queueEntryId, "consulting", "started_at");
+
     const consultation = await queueRepository.createConsultation({
       queue_entry_id: queueEntryId,
       patient_id: entry.patient_id,

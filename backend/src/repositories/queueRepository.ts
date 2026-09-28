@@ -21,6 +21,7 @@ export interface QueueEntryRecord {
   status: "waiting" | "called" | "consulting" | "completed" | "no_show" | "cancelled";
   joined_at: string;
   called_at?: string | null;
+  started_at?: string | null;
   completed_at?: string | null;
   patient?: {
     id: string;
@@ -188,22 +189,36 @@ export class QueueRepository {
       const { data, error } = await query;
 
       if (!error && data && data.length > 0) {
-        return data.map((item: any) => ({
-          id: item.id,
-          clinic_id: item.clinic_id,
-          patient_id: item.patient_id,
-          doctor_id: item.doctor_id,
-          priority: item.priority,
-          status: item.status,
-          joined_at: item.joined_at,
-          called_at: item.called_at,
-          completed_at: item.completed_at,
-          patient: {
-            id: item.patients?.id || item.patient_id,
-            name: item.patients?.full_name || "Patient",
-            phone: item.patients?.phone || "",
-          },
-        }));
+        return data.map((item: any) => {
+          let started_at = item.started_at || null;
+          if (!started_at && item.status === "consulting") {
+            // Check memory consultations cache
+            for (const cons of memoryStore.consultations.values()) {
+              if (cons.queue_entry_id === item.id) {
+                started_at = cons.started_at;
+                break;
+              }
+            }
+          }
+
+          return {
+            id: item.id,
+            clinic_id: item.clinic_id,
+            patient_id: item.patient_id,
+            doctor_id: item.doctor_id,
+            priority: item.priority,
+            status: item.status,
+            joined_at: item.joined_at,
+            called_at: item.called_at,
+            started_at,
+            completed_at: item.completed_at,
+            patient: {
+              id: item.patients?.id || item.patient_id,
+              name: item.patients?.full_name || "Patient",
+              phone: item.patients?.phone || "",
+            },
+          };
+        });
       }
     } catch (err) {
       console.warn("Supabase queue fetch notice, using fallback cache:", err);
@@ -222,8 +237,19 @@ export class QueueRepository {
 
       if (isDoctorMatch && isStatusActive) {
         const patient = memoryStore.patients.get(entry.patient_id);
+        let started_at = entry.started_at || null;
+        if (!started_at && entry.status === "consulting") {
+          for (const cons of memoryStore.consultations.values()) {
+            if (cons.queue_entry_id === entry.id) {
+              started_at = cons.started_at;
+              break;
+            }
+          }
+        }
+
         entries.push({
           ...entry,
+          started_at,
           patient: {
             id: entry.patient_id,
             name: patient?.full_name || "Walk-In Patient",
@@ -306,11 +332,12 @@ export class QueueRepository {
   async updateStatus(
     queueEntryId: string,
     status: QueueEntryRecord["status"],
-    timestampField?: "called_at" | "completed_at"
+    timestampField?: "called_at" | "started_at" | "completed_at"
   ): Promise<QueueEntryRecord> {
     const timestamp = new Date().toISOString();
     const updatePayload: any = { status };
     if (timestampField === "called_at") updatePayload.called_at = timestamp;
+    if (timestampField === "started_at" || status === "consulting") updatePayload.started_at = timestamp;
     if (timestampField === "completed_at") updatePayload.completed_at = timestamp;
 
     try {
@@ -341,6 +368,7 @@ export class QueueRepository {
         status,
         joined_at: new Date().toISOString(),
         ...(timestampField === "called_at" ? { called_at: timestamp } : {}),
+        ...(timestampField === "started_at" || status === "consulting" ? { started_at: timestamp } : {}),
         ...(timestampField === "completed_at" ? { completed_at: timestamp } : {}),
       };
       memoryStore.queueEntries.set(queueEntryId, newEntry);

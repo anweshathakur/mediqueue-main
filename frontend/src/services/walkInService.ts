@@ -25,6 +25,7 @@ export interface BackendQueueItem {
   status: "waiting" | "called" | "consulting" | "completed" | "no_show" | "cancelled";
   joined_at: string;
   called_at?: string | null;
+  started_at?: string | null;
   completed_at?: string | null;
 }
 

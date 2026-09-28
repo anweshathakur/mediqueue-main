@@ -27,7 +27,7 @@ export interface AppointmentRecord {
   patient_id: string;
   doctor_id: string;
   scheduled_at: string;
-  status: "booked" | "confirmed" | "cancelled" | "no_show" | "completed";
+  status: "booked" | "confirmed" | "checked_in" | "cancelled" | "no_show" | "completed";
   reason?: string | null;
   created_at: string;
   updated_at: string;
@@ -374,6 +374,96 @@ export class AppointmentRepository {
     if (existing) {
       existing.scheduled_at = newScheduledAt;
       existing.updated_at = new Date().toISOString();
+      appointmentStore.appointments.set(id, existing);
+      return existing;
+    }
+
+    throw new Error(`Appointment ${id} not found`);
+  }
+
+  /**
+   * Get appointment by ID
+   */
+  async getAppointmentById(id: string): Promise<AppointmentRecord | null> {
+    try {
+      const { data, error } = await supabase
+        .from("appointments")
+        .select(`
+          id,
+          clinic_id,
+          patient_id,
+          doctor_id,
+          scheduled_at,
+          status,
+          reason,
+          created_at,
+          updated_at,
+          doctors (
+            id,
+            name,
+            specialty,
+            room_number
+          ),
+          clinics (
+            id,
+            name,
+            address,
+            phone
+          ),
+          patients (
+            id,
+            full_name,
+            phone
+          )
+        `)
+        .eq("id", id)
+        .single();
+
+      if (!error && data) {
+        return {
+          id: data.id,
+          clinic_id: data.clinic_id,
+          patient_id: data.patient_id,
+          doctor_id: data.doctor_id,
+          scheduled_at: data.scheduled_at,
+          status: data.status,
+          reason: data.reason,
+          created_at: data.created_at,
+          updated_at: data.updated_at,
+          doctor: (data as any).doctors,
+          clinic: (data as any).clinics,
+          patient: (data as any).patients
+            ? {
+                id: (data as any).patients.id,
+                name: (data as any).patients.full_name,
+                phone: (data as any).patients.phone,
+              }
+            : undefined,
+        };
+      }
+    } catch (err) {}
+
+    const existing = appointmentStore.appointments.get(id);
+    if (existing) return existing;
+    return null;
+  }
+
+  /**
+   * Update appointment status
+   */
+  async updateStatus(id: string, status: AppointmentRecord["status"]): Promise<AppointmentRecord> {
+    const updatedAt = new Date().toISOString();
+    try {
+      await supabase
+        .from("appointments")
+        .update({ status, updated_at: updatedAt })
+        .eq("id", id);
+    } catch (err) {}
+
+    const existing = appointmentStore.appointments.get(id);
+    if (existing) {
+      existing.status = status;
+      existing.updated_at = updatedAt;
       appointmentStore.appointments.set(id, existing);
       return existing;
     }

@@ -3,7 +3,9 @@ import {
   ClinicRecord,
   DoctorRecord,
   AppointmentRecord,
+  appointmentStore,
 } from "../repositories/appointmentRepository";
+import { queueRepository, memoryStore } from "../repositories/queueRepository";
 
 export class AppointmentService {
   async getClinics(): Promise<ClinicRecord[]> {
@@ -50,6 +52,64 @@ export class AppointmentService {
 
   async cancelAppointment(id: string): Promise<AppointmentRecord> {
     return appointmentRepository.cancelAppointment(id);
+  }
+
+  /**
+   * Check in an appointment on appointment day -> generates queue_entries row
+   */
+  async checkInAppointment(appointmentId: string, patientIdentifier?: string) {
+    const appointment = await appointmentRepository.getAppointmentById(appointmentId);
+    if (!appointment) {
+      throw new Error(`Appointment ${appointmentId} not found`);
+    }
+
+    if (appointment.status === "cancelled") {
+      throw new Error("Cannot check in for a cancelled appointment");
+    }
+
+    // Check if patient already has an active queue entry for this appointment
+    const existingQueueEntry = await queueRepository.getQueueEntryByAppointmentId(appointmentId);
+    if (existingQueueEntry) {
+      return {
+        message: "Patient already checked in",
+        queueEntry: existingQueueEntry,
+        appointment,
+      };
+    }
+
+    // Register patient in cache if available
+    if (appointment.patient) {
+      memoryStore.patients.set(appointment.patient_id, {
+        id: appointment.patient_id,
+        full_name: appointment.patient.name,
+        phone: appointment.patient.phone,
+        created_at: new Date().toISOString(),
+      });
+    }
+
+    // Look up doctor name
+    const doctor = appointmentStore.doctors.get(appointment.doctor_id);
+
+    // Create new queue entry
+    const queueEntry = await queueRepository.createQueueEntry({
+      clinic_id: appointment.clinic_id,
+      patient_id: appointment.patient_id,
+      doctor_id: appointment.doctor_id,
+      doctor_name: doctor?.name || appointment.doctor?.name,
+      appointment_id: appointment.id,
+      priority: "normal",
+      status: "waiting",
+      joined_at: new Date().toISOString(),
+    });
+
+    // Update appointment status to checked_in
+    const updatedAppointment = await appointmentRepository.updateStatus(appointmentId, "checked_in");
+
+    return {
+      message: "Checked in successfully. Added to doctor queue.",
+      queueEntry,
+      appointment: updatedAppointment,
+    };
   }
 }
 

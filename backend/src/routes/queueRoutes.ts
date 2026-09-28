@@ -3,6 +3,9 @@ import { queueController } from "../controllers/queueController";
 
 const router = Router();
 
+// Retrieve live patient queue status
+router.get("/my", (req, res) => queueController.getMyQueueStatus(req, res));
+
 // Retrieve doctor queue (GET /api/queue/:doctorId or GET /api/queue)
 router.get("/:doctorId", (req, res) => queueController.getDoctorQueue(req, res));
 router.get("/", (req, res) => queueController.getDoctorQueue(req, res));

@@ -136,6 +136,28 @@ export class AppointmentController {
       });
     }
   }
+
+  /**
+   * POST /api/appointments/:id/check-in
+   */
+  async checkInAppointment(req: Request, res: Response) {
+    try {
+      const { id } = req.params;
+      const patientId = (req.body?.patient_id || req.query?.patient_id) as string;
+
+      if (!id) {
+        return res.status(400).json({ message: "Appointment ID is required" });
+      }
+
+      const result = await appointmentService.checkInAppointment(id, patientId);
+      return res.status(200).json(result);
+    } catch (error) {
+      return res.status(500).json({
+        message: "Failed to check in appointment",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
 }
 
 export const appointmentController = new AppointmentController();

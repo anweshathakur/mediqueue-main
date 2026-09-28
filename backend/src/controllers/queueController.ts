@@ -86,6 +86,22 @@ export class QueueController {
       });
     }
   }
+
+  /**
+   * GET /api/queue/my
+   */
+  async getMyQueueStatus(req: Request, res: Response) {
+    try {
+      const patientId = (req.query.patient_id || req.query.id || req.query.phone || req.query.email) as string;
+      const status = await queueService.getMyQueueStatus(patientId);
+      return res.status(200).json(status);
+    } catch (error) {
+      return res.status(500).json({
+        message: "Failed to fetch queue status",
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  }
 }
 
 export const queueController = new QueueController();

@@ -123,6 +123,7 @@ export default function App() {
       {page === "patient-tracker" && trackingAppointment && (
         <LiveTracker
           appointment={trackingAppointment}
+          userEmail={currentUserEmail}
           onBack={() => setPage("patient-dashboard")}
           onCancel={() => handleCancelAppointment(trackingAppointment.id)}
           onReschedule={() => handleRescheduleAppointment(trackingAppointment.id)}

@@ -1,4 +1,5 @@
 import { queueRepository, QueueEntryRecord, ConsultationRecord } from "../repositories/queueRepository";
+import { appointmentStore } from "../repositories/appointmentRepository";
 
 export interface QueueItemResponse {
   id: string;
@@ -149,6 +150,90 @@ export class QueueService {
     return {
       queueEntry: updatedQueueEntry,
       consultation,
+    };
+  }
+
+  /**
+   * Get patient's live queue status
+   * Returns dynamic position, people ahead, currently seeing, estimated wait, and clinic/doctor details
+   */
+  async getMyQueueStatus(patientIdentifier?: string) {
+    const activeEntries = await queueRepository.getActiveQueueByPatient(patientIdentifier);
+    if (!activeEntries || activeEntries.length === 0) {
+      return {
+        hasActiveQueue: false,
+        message: "No active queue entry found",
+      };
+    }
+
+    // Pick the active queue entry
+    const entry = activeEntries[0];
+
+    // Get doctor's full live queue
+    const doctorQueue = await this.getDoctorQueue(entry.doctor_id);
+
+    // Dynamic queue position
+    const myIndex = doctorQueue.findIndex((q) => q.id === entry.id);
+    const position = myIndex !== -1 ? myIndex + 1 : 1;
+    const peopleAhead = Math.max(0, position - 1);
+
+    // Currently seeing / in-room
+    const consultingPatient =
+      doctorQueue.find((q) => q.status === "consulting") ||
+      doctorQueue.find((q) => q.status === "called");
+
+    const currentlySeeing = consultingPatient
+      ? `#${consultingPatient.position} (${consultingPatient.patient.name})`
+      : "Next in line";
+
+    const avgTimePerPatient = 15;
+    const estimatedWaitMins = peopleAhead * avgTimePerPatient;
+    const estimatedWait = peopleAhead === 0 ? "Ready now" : `~${estimatedWaitMins} min`;
+
+    // Doctor details
+    const doctor = appointmentStore.doctors.get(entry.doctor_id) || {
+      id: entry.doctor_id,
+      name: entry.doctor_name || "Dr. Medical Specialist",
+      specialty: "General Medicine",
+      room_number: "Room 102",
+      clinic_id: entry.clinic_id,
+      status: "available" as const,
+    };
+
+    // Clinic details
+    const clinic = appointmentStore.clinics.get(entry.clinic_id) || {
+      id: entry.clinic_id,
+      name: "MediQueue Health Centre",
+      address: "100 Medical Blvd",
+      phone: "+91 (555) 019-2834",
+    };
+
+    return {
+      hasActiveQueue: true,
+      queueEntry: {
+        id: entry.id,
+        position,
+        peopleAhead,
+        currentlySeeing,
+        estimatedWait,
+        estimatedWaitMins,
+        status: entry.status,
+        priority: entry.priority,
+        joined_at: entry.joined_at,
+        appointment_id: entry.appointment_id,
+      },
+      doctor: {
+        id: doctor.id,
+        name: doctor.name,
+        specialty: doctor.specialty,
+        room_number: doctor.room_number || "Room 102",
+      },
+      clinic: {
+        id: clinic.id,
+        name: clinic.name,
+        address: clinic.address,
+        phone: clinic.phone,
+      },
     };
   }
 }

@@ -461,6 +461,133 @@ export class QueueRepository {
     memoryStore.consultations.set(consultationId, newRecord);
     return newRecord;
   }
+
+  /**
+   * Create a new queue entry (for walk-in or appointment check-in)
+   */
+  async createQueueEntry(data: {
+    clinic_id: string;
+    patient_id: string;
+    doctor_id: string;
+    doctor_name?: string;
+    appointment_id?: string | null;
+    priority?: "normal" | "priority" | "critical";
+    status?: "waiting" | "called" | "consulting";
+    joined_at?: string;
+  }): Promise<QueueEntryRecord> {
+    const entryId = crypto.randomUUID ? crypto.randomUUID() : `q-${Date.now()}`;
+    const newEntry: QueueEntryRecord = {
+      id: entryId,
+      clinic_id: data.clinic_id,
+      patient_id: data.patient_id,
+      doctor_id: data.doctor_id,
+      doctor_name: data.doctor_name,
+      appointment_id: data.appointment_id || null,
+      priority: data.priority || "normal",
+      status: data.status || "waiting",
+      joined_at: data.joined_at || new Date().toISOString(),
+      called_at: null,
+      started_at: null,
+      completed_at: null,
+    };
+
+    try {
+      const { data: inserted, error } = await supabase
+        .from("queue_entries")
+        .insert({
+          id: entryId,
+          clinic_id: newEntry.clinic_id,
+          patient_id: newEntry.patient_id,
+          doctor_id: newEntry.doctor_id,
+          appointment_id: newEntry.appointment_id,
+          priority: newEntry.priority,
+          status: newEntry.status,
+          joined_at: newEntry.joined_at,
+        })
+        .select()
+        .single();
+
+      if (!error && inserted) {
+        memoryStore.queueEntries.set(inserted.id, inserted);
+        return inserted as QueueEntryRecord;
+      }
+    } catch (err) {}
+
+    memoryStore.queueEntries.set(entryId, newEntry);
+    return newEntry;
+  }
+
+  /**
+   * Check if an appointment has already checked into the queue
+   */
+  async getQueueEntryByAppointmentId(appointmentId: string): Promise<QueueEntryRecord | null> {
+    try {
+      const { data, error } = await supabase
+        .from("queue_entries")
+        .select("*")
+        .eq("appointment_id", appointmentId)
+        .in("status", ["waiting", "called", "consulting"])
+        .maybeSingle();
+
+      if (!error && data) {
+        return data as QueueEntryRecord;
+      }
+    } catch (err) {}
+
+    for (const entry of memoryStore.queueEntries.values()) {
+      if (entry.appointment_id === appointmentId && ["waiting", "called", "consulting"].includes(entry.status)) {
+        return entry;
+      }
+    }
+    return null;
+  }
+
+  /**
+   * Get active queue entries for a given patient identifier
+   */
+  async getActiveQueueByPatient(patientId?: string): Promise<QueueEntryRecord[]> {
+    try {
+      let query = supabase
+        .from("queue_entries")
+        .select(`
+          *,
+          patients:patient_id (
+            id,
+            full_name,
+            phone
+          )
+        `)
+        .in("status", ["waiting", "called", "consulting"]);
+
+      if (patientId) {
+        query = query.eq("patient_id", patientId);
+      }
+
+      const { data, error } = await query;
+      if (!error && data && data.length > 0) {
+        return data as QueueEntryRecord[];
+      }
+    } catch (err) {}
+
+    const results: QueueEntryRecord[] = [];
+    for (const entry of memoryStore.queueEntries.values()) {
+      if (["waiting", "called", "consulting"].includes(entry.status)) {
+        if (!patientId || entry.patient_id === patientId || entry.appointment_id === patientId) {
+          const patient = memoryStore.patients.get(entry.patient_id);
+          results.push({
+            ...entry,
+            patient: {
+              id: entry.patient_id,
+              name: patient?.full_name || "Patient",
+              phone: patient?.phone || "",
+              age: patient?.age,
+            },
+          });
+        }
+      }
+    }
+    return results;
+  }
 }
 
 export const queueRepository = new QueueRepository();

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Stethoscope, Activity, Clock, Users, Play, AlertCircle, ArrowLeft } from 'lucide-react';
-import { QueueItem, DOCTORS } from '../../types';
+import { Stethoscope, Activity, Clock, Users, Play, AlertCircle, ArrowLeft, Bell, CheckCircle2, ShieldAlert } from 'lucide-react';
+import { DOCTORS } from '../../types';
+import { walkInClient, BackendQueueItem } from '../../services/walkInService';
 import { queueService } from '../../services/queueService';
 
 interface DoctorDashboardProps {
@@ -8,78 +9,114 @@ interface DoctorDashboardProps {
 }
 
 export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
-  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [queue, setQueue] = useState<BackendQueueItem[]>([]);
   const [avgTime, setAvgTime] = useState(15);
   const [globalDelay, setGlobalDelay] = useState(0);
   const [selectedDoctor, setSelectedDoctor] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
 
   const [consultationStart, setConsultationStart] = useState<number | null>(null);
   const [elapsed, setElapsed] = useState(0);
 
-  useEffect(() => {
-    const sync = () => {
-      setQueue(queueService.getLocalQueue());
-      setAvgTime(queueService.getAvgConsultation());
-      setGlobalDelay(queueService.getGlobalDelay());
-    };
-    sync();
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
+  // Fetch real queue from backend
+  const fetchQueue = async () => {
+    try {
+      setIsLoading(true);
+      const data = await walkInClient.getDoctorQueue(selectedDoctor);
+      if (Array.isArray(data)) {
+        setQueue(data);
+        // If there's an active consultation already, sync timer
+        const consultingItem = data.find(q => q.status === 'consulting');
+        if (consultingItem && !consultationStart) {
+          setConsultationStart(Date.now());
+        }
+      }
+    } catch (err) {
+      console.warn("Error fetching doctor queue:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    let interval: any;
+    fetchQueue();
+    const interval = setInterval(fetchQueue, 4000);
+    return () => clearInterval(interval);
+  }, [selectedDoctor]);
+
+  useEffect(() => {
+    let timer: any;
     if (consultationStart) {
-      interval = setInterval(() => {
-        setElapsed(Math.floor((Date.now() - consultationStart) / 60000));
+      timer = setInterval(() => {
+        setElapsed(Math.floor((Date.now() - consultationStart) / 1000));
       }, 1000);
     } else {
       setElapsed(0);
     }
-    return () => clearInterval(interval);
+    return () => clearInterval(timer);
   }, [consultationStart]);
 
-  const activeQueue = queue.filter(p => p.status !== 'No-Show');
-  const currentPatient = activeQueue[0];
-  const upcomingQueue = activeQueue.slice(0, 6);
+  // Current patient is the first active (consulting/called/waiting)
+  const currentPatient = queue[0];
+  const upcomingQueue = queue.slice(1);
 
-  const handleStart = () => {
-    setConsultationStart(Date.now());
-    if (activeQueue.length > 0) {
-      const newQueue = [...queue];
-      const targetIndex = newQueue.findIndex(q => q.id === activeQueue[0].id);
-      if (targetIndex !== -1) {
-        newQueue[targetIndex].status = 'Consulting';
-        queueService.setLocalQueue(newQueue);
-      }
+  // Action: Call Next Patient (waiting -> called)
+  const handleCall = async (item: BackendQueueItem) => {
+    try {
+      setActionLoading(true);
+      await walkInClient.callPatient(item.id);
+      await fetchQueue();
+    } catch (err: any) {
+      alert("Failed to call patient: " + (err.message || "Unknown error"));
+    } finally {
+      setActionLoading(false);
     }
   };
 
-  const handleNextPatient = (simulatedDuration?: number) => {
-    const finalDuration = simulatedDuration || Math.max(1, elapsed);
-    queueService.setAvgConsultation(finalDuration);
-
-    if (activeQueue.length > 0) {
-      const completedPatient = activeQueue[0];
-      queueService.addHistory({
-        id: Date.now(),
-        patient_name: completedPatient.name,
-        patient_type: completedPatient.type,
-        doctor_name: DOCTORS.find(d => d.id === selectedDoctor)?.name || 'Dr. Arjun Mehta',
-        completed_at: new Date().toISOString()
-      });
-
-      const newQueue = queue.filter(q => q.id !== completedPatient.id);
-      queueService.setLocalQueue(newQueue);
+  // Action: Start Consultation (called/waiting -> consulting)
+  const handleStart = async (item: BackendQueueItem) => {
+    try {
+      setActionLoading(true);
+      setConsultationStart(Date.now());
+      await walkInClient.startConsultation(item.id);
+      await fetchQueue();
+    } catch (err: any) {
+      alert("Failed to start consultation: " + (err.message || "Unknown error"));
+    } finally {
+      setActionLoading(false);
     }
+  };
 
-    setConsultationStart(null);
+  // Action: Complete Consultation (consulting -> completed)
+  const handleComplete = async (item: BackendQueueItem) => {
+    try {
+      setActionLoading(true);
+      const minutesSpent = Math.max(1, Math.round(elapsed / 60));
+      queueService.setAvgConsultation(minutesSpent);
+      setAvgTime(minutesSpent);
+
+      await walkInClient.completeConsultation(item.id);
+      setConsultationStart(null);
+      setElapsed(0);
+      await fetchQueue();
+    } catch (err: any) {
+      alert("Failed to complete consultation: " + (err.message || "Unknown error"));
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const addGlobalDelay = (mins: number) => {
     const updated = globalDelay + mins;
     setGlobalDelay(updated);
     queueService.setGlobalDelay(updated);
+  };
+
+  const formatSeconds = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
   return (
@@ -106,8 +143,11 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
         <div className="flex items-center gap-3">
           <select
             value={selectedDoctor}
-            onChange={(e) => setSelectedDoctor(Number(e.target.value))}
-            className="px-4 py-2.5 rounded-xl bg-[#131720] border border-slate-800 text-white font-bold text-xs focus:outline-none focus:ring-2 focus:ring-[#00e599]/30"
+            onChange={(e) => {
+              setSelectedDoctor(Number(e.target.value));
+              setConsultationStart(null);
+            }}
+            className="px-4 py-2.5 rounded-xl bg-[#131720] border border-slate-800 text-white font-bold text-xs focus:outline-none focus:ring-2 focus:ring-[#00e599]/30 cursor-pointer"
           >
             {DOCTORS.map(d => <option key={d.id} value={d.id} className="bg-slate-900">{d.name} ({d.specialty})</option>)}
           </select>
@@ -121,10 +161,10 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
       <div className="grid grid-cols-3 gap-6 mb-8 relative z-10">
         <div className="bg-[#0b0d12] rounded-2xl p-6 border border-slate-800/80 shadow-2xl">
           <div className="flex justify-between items-start mb-3">
-            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Waiting Patients</h3>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Active Queue</h3>
             <div className="w-8 h-8 rounded-lg bg-[#00e599]/10 flex items-center justify-center text-[#00e599]"><Users className="w-4 h-4" /></div>
           </div>
-          <p className="text-3xl font-extrabold text-[#00e599]">{activeQueue.length}</p>
+          <p className="text-3xl font-extrabold text-[#00e599]">{queue.length}</p>
         </div>
 
         <div className="bg-[#0b0d12] rounded-2xl p-6 border border-slate-800/80 shadow-2xl">
@@ -147,90 +187,186 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
       {/* Main Grid */}
       <div className="grid lg:grid-cols-3 gap-8 relative z-10">
         <div className="lg:col-span-2 space-y-6">
-          {/* Active Consultation Hero Card */}
+          {/* Active / Current Patient Hero Card */}
           <div className="bg-[#0b0d12] rounded-3xl p-8 border border-slate-800/80 shadow-2xl relative overflow-hidden">
             <div className="flex justify-between items-start mb-6">
-              <span className="text-xs font-extrabold uppercase tracking-widest text-[#00e599]">Active Patient In Consultation</span>
-              {currentPatient?.status === 'Consulting' && (
-                <span className="px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-[#00e599] text-xs font-extrabold animate-pulse">
-                  In Room
-                </span>
+              <span className="text-xs font-extrabold uppercase tracking-widest text-[#00e599] flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#00e599] animate-pulse"></span>
+                {currentPatient?.status === 'consulting'
+                  ? 'Active Patient In Room'
+                  : currentPatient?.status === 'called'
+                  ? 'Patient Called to Consultation Room'
+                  : 'Next Patient in Queue'}
+              </span>
+
+              {currentPatient && (
+                <div className="flex items-center gap-2">
+                  {currentPatient.priority === 'critical' ? (
+                    <span className="px-3 py-1 rounded-full bg-red-950/80 border border-red-500/50 text-red-400 text-xs font-extrabold flex items-center gap-1.5 animate-pulse">
+                      <ShieldAlert className="w-3.5 h-3.5" /> Critical
+                    </span>
+                  ) : currentPatient.priority === 'priority' ? (
+                    <span className="px-3 py-1 rounded-full bg-amber-950/60 border border-amber-500/40 text-amber-400 text-xs font-extrabold">
+                      Priority
+                    </span>
+                  ) : (
+                    <span className="px-3 py-1 rounded-full bg-slate-900 border border-slate-800 text-slate-300 text-xs font-bold">
+                      Normal
+                    </span>
+                  )}
+                  <span className="px-3 py-1 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-[#00e599] text-xs font-extrabold">
+                    Position #{currentPatient.position}
+                  </span>
+                </div>
               )}
             </div>
 
             {currentPatient ? (
               <div className="space-y-6">
                 <div>
-                  <h2 className="text-3xl font-extrabold text-white">{currentPatient.name}</h2>
-                  <p className="text-xs text-slate-400 font-semibold mt-1">Token #{currentPatient.id} • {currentPatient.type} • Scheduled {currentPatient.scheduled}</p>
+                  <h2 className="text-3xl font-extrabold text-white">{currentPatient.patient?.name || 'Walk-In Patient'}</h2>
+                  <p className="text-xs text-slate-400 font-semibold mt-1">
+                    Phone: {currentPatient.patient?.phone || 'N/A'} • Joined: {new Date(currentPatient.joined_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • Status: <span className="text-white font-bold capitalize">{currentPatient.status}</span>
+                  </p>
                 </div>
 
-                <div className="p-5 rounded-2xl bg-[#131720] border border-slate-800 flex items-center justify-between">
+                <div className="p-5 rounded-2xl bg-[#131720] border border-slate-800 flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3">
                     <Clock className="w-6 h-6 text-[#00e599]" />
                     <div>
-                      <p className="text-xs text-slate-400 font-bold">Consultation Timer</p>
-                      <p className="text-2xl font-black text-white">{elapsed} mins elapsed</p>
+                      <p className="text-xs text-slate-400 font-bold">
+                        {currentPatient.status === 'consulting' ? 'Active Consultation Duration' : 'Estimated Consultation Target'}
+                      </p>
+                      <p className="text-2xl font-black text-white">
+                        {currentPatient.status === 'consulting' ? formatSeconds(elapsed) : `${avgTime} mins`}
+                      </p>
                     </div>
                   </div>
-                  {consultationStart ? (
-                    <button
-                      onClick={() => handleNextPatient()}
-                      className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer"
-                    >
-                      Complete & Call Next
-                    </button>
-                  ) : (
-                    <button
-                      onClick={handleStart}
-                      className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-1.5"
-                    >
-                      <Play className="w-3.5 h-3.5 fill-black" /> Begin Consultation
-                    </button>
-                  )}
+
+                  {/* Dynamic Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    {currentPatient.status === 'consulting' ? (
+                      <button
+                        onClick={() => handleComplete(currentPatient)}
+                        disabled={actionLoading}
+                        className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-2"
+                      >
+                        <CheckCircle2 className="w-4 h-4" /> Complete Consultation
+                      </button>
+                    ) : currentPatient.status === 'called' ? (
+                      <button
+                        onClick={() => handleStart(currentPatient)}
+                        disabled={actionLoading}
+                        className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-2"
+                      >
+                        <Play className="w-3.5 h-3.5 fill-black" /> Begin Consultation
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleCall(currentPatient)}
+                          disabled={actionLoading}
+                          className="px-5 py-3 rounded-xl bg-[#131720] hover:bg-slate-800 border border-slate-700 text-white font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Bell className="w-3.5 h-3.5 text-amber-400" /> Call Patient
+                        </button>
+                        <button
+                          onClick={() => handleStart(currentPatient)}
+                          disabled={actionLoading}
+                          className="px-6 py-3 rounded-xl bg-[#00e599] hover:bg-[#00c985] text-black font-extrabold text-xs transition-all shadow-[0_0_20px_rgba(0,229,153,0.25)] cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Play className="w-3.5 h-3.5 fill-black" /> Begin Consultation
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : (
               <div className="py-12 text-center text-slate-500">
                 <Stethoscope className="w-12 h-12 mx-auto mb-3 opacity-20" />
                 <p className="font-bold text-white">No patients waiting in queue</p>
+                <p className="text-xs text-slate-400 mt-1">Walk-in or scheduled appointments will appear automatically</p>
               </div>
             )}
           </div>
 
-          {/* Upcoming Queue */}
+          {/* Upcoming Queue Table */}
           <div className="bg-[#0b0d12] rounded-3xl p-8 border border-slate-800/80 shadow-2xl">
-            <h3 className="text-lg font-bold text-white mb-4">Upcoming Queue</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-white">Upcoming Waiting Queue</h3>
+              <span className="text-xs font-semibold text-slate-400">Dynamic Priority-Weighted Sort</span>
+            </div>
+
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-slate-800 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                    <th className="pb-3 pl-2">Token</th>
-                    <th className="pb-3">Name</th>
-                    <th className="pb-3">Type</th>
-                    <th className="pb-3">Scheduled</th>
+                    <th className="pb-3 pl-2">Position</th>
+                    <th className="pb-3">Patient Name</th>
+                    <th className="pb-3">Priority</th>
+                    <th className="pb-3">Status</th>
+                    <th className="pb-3">Joined At</th>
+                    <th className="pb-3 text-right pr-2">Action</th>
                   </tr>
                 </thead>
                 <tbody className="text-xs divide-y divide-slate-800/50 font-medium">
-                  {upcomingQueue.map((p) => (
-                    <tr key={p.id} className="hover:bg-slate-900/40 transition-colors">
-                      <td className="py-3 pl-2 text-[#00e599] font-bold">#{p.id}</td>
-                      <td className="py-3 font-bold text-white">{p.name}</td>
-                      <td className="py-3">
-                        <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px] font-bold">
-                          {p.type}
-                        </span>
+                  {upcomingQueue.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-6 text-center text-slate-500 font-semibold">
+                        No additional patients in queue
                       </td>
-                      <td className="py-3 text-slate-400">{p.scheduled}</td>
                     </tr>
-                  ))}
+                  ) : (
+                    upcomingQueue.map((p) => (
+                      <tr key={p.id} className="hover:bg-slate-900/40 transition-colors">
+                        <td className="py-3.5 pl-2 text-[#00e599] font-black">#{p.position}</td>
+                        <td className="py-3.5 font-bold text-white">
+                          {p.patient?.name}
+                          <span className="block text-[10px] text-slate-400 font-normal">{p.patient?.phone}</span>
+                        </td>
+                        <td className="py-3.5">
+                          {p.priority === 'critical' ? (
+                            <span className="px-2 py-0.5 rounded bg-red-950/60 border border-red-500/40 text-red-400 text-[10px] font-bold">
+                              Critical
+                            </span>
+                          ) : p.priority === 'priority' ? (
+                            <span className="px-2 py-0.5 rounded bg-amber-950/60 border border-amber-500/40 text-amber-400 text-[10px] font-bold">
+                              Priority
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-400 text-[10px] font-semibold">
+                              Normal
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5">
+                          <span className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-slate-300 text-[10px] font-bold capitalize">
+                            {p.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-slate-400">
+                          {new Date(p.joined_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </td>
+                        <td className="py-3.5 text-right pr-2">
+                          <button
+                            onClick={() => handleCall(p)}
+                            disabled={actionLoading}
+                            className="px-3 py-1 rounded-lg bg-[#131720] hover:bg-[#00e599] hover:text-black border border-slate-800 text-slate-300 font-bold text-[10px] transition-all cursor-pointer"
+                          >
+                            Call
+                          </button>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </div>
         </div>
 
-        {/* Chaos / Delay Control Sidebar */}
+        {/* Schedule & Delays Sidebar */}
         <div className="space-y-6">
           <div className="bg-[#0b0d12] rounded-3xl p-8 border border-slate-800/80 shadow-2xl">
             <div className="flex items-center gap-2 mb-3 text-amber-400">
@@ -267,3 +403,4 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack }) => {
     </main>
   );
 };
+

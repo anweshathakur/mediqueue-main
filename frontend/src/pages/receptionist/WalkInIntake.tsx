@@ -41,13 +41,17 @@ export const WalkInIntake: React.FC<WalkInIntakeProps> = ({ onWalkInAdded }) => 
     let registeredToken: QueueItem | null = null;
 
     try {
+      const docMatch = DOCTORS.find(d => d.name === assignedDoctor);
+      const doctorId = docMatch ? String(docMatch.id) : "1";
+
       const res = await walkInClient.createWalkIn({
         name,
         phone,
         age: Number(age) || 30,
+        doctor_id: doctorId,
         doctor_name: assignedDoctor,
         department: specialty,
-        priority
+        priority: priority ? "critical" : "normal"
       });
 
       if (res && res.data) {

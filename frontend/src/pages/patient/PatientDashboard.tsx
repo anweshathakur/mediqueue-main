@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { CalendarDays, Stethoscope, Clock, Trash2, ArrowRight, Lock } from 'lucide-react';
-import { QueueItem } from '../../types';
-import { queueService } from '../../services/queueService';
+import { CalendarDays, Stethoscope, Clock, Trash2, ArrowRight, Lock, Building2, AlertCircle } from 'lucide-react';
+import { appointmentClient, Appointment } from '../../services/appointmentService';
 
 interface PatientDashboardProps {
   userEmail: string;
   onNew: () => void;
-  onTrack: (apt: QueueItem) => void;
+  onTrack: (apt: any) => void;
   onCancel: (id: string) => void;
   onReschedule: (id: string) => void;
   onLogout: () => void;
@@ -20,16 +19,48 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({
   onReschedule,
   onLogout,
 }) => {
-  const [queue, setQueue] = useState<QueueItem[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchAppointments = async () => {
+    setIsLoading(true);
+    try {
+      const list = await appointmentClient.getMyAppointments(userEmail);
+      if (Array.isArray(list)) {
+        setAppointments(list);
+      }
+    } catch (err) {
+      console.warn("Error fetching patient appointments:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const sync = () => {
-      setQueue(queueService.getLocalQueue());
-    };
-    sync();
-    window.addEventListener('storage', sync);
-    return () => window.removeEventListener('storage', sync);
-  }, []);
+    fetchAppointments();
+    const interval = setInterval(fetchAppointments, 5000);
+    return () => clearInterval(interval);
+  }, [userEmail]);
+
+  const handleCancel = async (id: string) => {
+    if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
+    try {
+      await appointmentClient.cancelAppointment(id);
+      await fetchAppointments();
+    } catch (err: any) {
+      alert("Failed to cancel appointment: " + (err.message || "Unknown error"));
+    }
+  };
+
+  const formatScheduled = (iso: string) => {
+    try {
+      const d = new Date(iso);
+      if (isNaN(d.getTime())) return iso;
+      return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' • ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return iso;
+    }
+  };
 
   return (
     <main className="max-w-5xl mx-auto px-8 py-16 min-h-[calc(100vh-180px)] bg-black text-white relative z-10">
@@ -63,20 +94,20 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({
       </div>
 
       <div className="space-y-4 relative z-10">
-        {queue.length === 0 ? (
+        {appointments.length === 0 ? (
           <div className="text-center py-20 bg-[#0b0d12] rounded-3xl border border-slate-800/80 shadow-2xl">
             <div className="w-16 h-16 bg-slate-900 border border-slate-800 rounded-2xl flex items-center justify-center mx-auto mb-4 text-[#00e599]">
               <CalendarDays className="w-8 h-8" />
             </div>
             <h3 className="text-xl font-bold text-white mb-1">No Active Appointments</h3>
-            <p className="text-slate-400 text-xs mb-6 max-w-sm mx-auto font-medium">You do not have any appointments in the active queue.</p>
-            <button onClick={onNew} className="text-[#00e599] font-bold text-xs hover:underline flex items-center gap-1 mx-auto">
+            <p className="text-slate-400 text-xs mb-6 max-w-sm mx-auto font-medium">You do not have any upcoming scheduled appointments.</p>
+            <button onClick={onNew} className="text-[#00e599] font-bold text-xs hover:underline flex items-center gap-1 mx-auto cursor-pointer">
               Book an appointment now <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
-            {queue.map(apt => (
+            {appointments.map((apt) => (
               <div key={apt.id} className="bg-[#0b0d12] p-8 rounded-3xl border border-slate-800/80 shadow-2xl hover:border-[#00e599]/40 transition-all flex flex-col justify-between group">
                 <div className="flex justify-between items-start mb-6">
                   <div className="flex items-center gap-4">
@@ -84,8 +115,15 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({
                       <Stethoscope className="w-6 h-6" />
                     </div>
                     <div>
-                      <h2 className="text-lg font-extrabold text-white">{apt.name} <span className="text-xs font-bold text-slate-400 ml-2 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded">#{apt.id}</span></h2>
-                      <p className="text-slate-400 text-xs font-semibold mt-0.5">With <span className="text-slate-200 font-bold">{apt.doctor_name || 'Assigned Physician'}</span></p>
+                      <h2 className="text-lg font-extrabold text-white">
+                        {apt.doctor?.name || 'Physician'} 
+                        <span className="text-xs font-bold text-slate-400 ml-2 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded capitalize">
+                          {apt.status}
+                        </span>
+                      </h2>
+                      <p className="text-slate-400 text-xs font-semibold mt-0.5">
+                        {apt.doctor?.specialty || 'General Medicine'} • <span className="text-slate-300 font-bold">{apt.clinic?.name || 'MUJ Health Centre'}</span>
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -93,16 +131,36 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({
                 <div className="pt-6 border-t border-slate-800 flex justify-between items-center">
                   <div>
                     <span className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-0.5">Scheduled Slot</span>
-                    <p className="text-sm font-extrabold text-[#00e599]">{apt.scheduled}</p>
+                    <p className="text-sm font-extrabold text-[#00e599]">{formatScheduled(apt.scheduled_at)}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => onReschedule(apt.id)} className="p-2 rounded-xl border border-slate-800 bg-[#131720] text-slate-400 hover:text-amber-400 transition-colors" title="Reschedule">
+                    <button
+                      onClick={() => onReschedule(apt.id)}
+                      className="p-2.5 rounded-xl border border-slate-800 bg-[#131720] text-slate-400 hover:text-amber-400 hover:border-amber-500/30 transition-colors cursor-pointer"
+                      title="Reschedule"
+                    >
                       <Clock className="w-4 h-4" />
                     </button>
-                    <button onClick={() => onCancel(apt.id)} className="p-2 rounded-xl border border-slate-800 bg-[#131720] text-slate-400 hover:text-red-400 transition-colors" title="Cancel">
+                    <button
+                      onClick={() => handleCancel(apt.id)}
+                      className="p-2.5 rounded-xl border border-slate-800 bg-[#131720] text-slate-400 hover:text-red-400 hover:border-red-500/30 transition-colors cursor-pointer"
+                      title="Cancel"
+                    >
                       <Trash2 className="w-4 h-4" />
                     </button>
-                    <button onClick={() => onTrack(apt)} className="text-xs font-extrabold text-black bg-[#00e599] hover:bg-[#00c985] px-4 py-2 rounded-xl shadow-md transition-all cursor-pointer ml-1">
+                    <button
+                      onClick={() => onTrack({
+                        id: apt.id,
+                        name: apt.patient?.name || userEmail.split('@')[0],
+                        phone: apt.patient?.phone || '',
+                        scheduled: formatScheduled(apt.scheduled_at),
+                        status: 'Waiting',
+                        doctor_name: apt.doctor?.name,
+                        department: apt.doctor?.specialty,
+                        type: 'Online'
+                      })}
+                      className="text-xs font-extrabold text-black bg-[#00e599] hover:bg-[#00c985] px-4 py-2.5 rounded-xl shadow-md transition-all cursor-pointer ml-1"
+                    >
                       Track Now
                     </button>
                   </div>

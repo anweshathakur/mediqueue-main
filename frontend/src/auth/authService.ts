@@ -13,11 +13,29 @@ export interface AuthUser {
 
 const AUTH_STORAGE_KEY = 'mediqueue_auth_user';
 
+const DEMO_EMAIL = 'demo123@gmail.com';
+const DEMO_PASS = 'demo@123';
+
 export const authService = {
   /**
-   * Patient Sign In - strictly verifies Supabase credentials
+   * Patient Sign In - accepts demo credentials or verifies Supabase credentials
    */
   async loginPatient(email: string, pass: string): Promise<AuthUser> {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Master Demo Account check
+    if (cleanEmail === DEMO_EMAIL && pass === DEMO_PASS) {
+      const demoUser: AuthUser = {
+        id: 'patient_demo123',
+        email: DEMO_EMAIL,
+        name: 'Demo Patient',
+        role: 'patient',
+        phone: '+91 9876543210'
+      };
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(demoUser));
+      return demoUser;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: pass,
@@ -93,9 +111,24 @@ export const authService = {
   },
 
   /**
-   * Doctor Sign In
+   * Doctor Sign In - accepts demo credentials or verifies Supabase credentials
    */
   async loginDoctor(email: string, pass: string): Promise<AuthUser> {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Master Demo Account check
+    if (cleanEmail === DEMO_EMAIL && pass === DEMO_PASS) {
+      const demoUser: AuthUser = {
+        id: 'doc_demo123',
+        email: DEMO_EMAIL,
+        name: 'Dr. Arjun Mehta',
+        role: 'doctor',
+        department: 'General Medicine'
+      };
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(demoUser));
+      return demoUser;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: pass,
@@ -178,9 +211,24 @@ export const authService = {
   },
 
   /**
-   * Staff / Receptionist Sign In
+   * Staff / Receptionist Sign In - accepts demo credentials or verifies Supabase credentials
    */
   async loginStaff(email: string, pass: string): Promise<AuthUser> {
+    const cleanEmail = email.trim().toLowerCase();
+
+    // Master Demo Account check
+    if (cleanEmail === DEMO_EMAIL && pass === DEMO_PASS) {
+      const demoUser: AuthUser = {
+        id: 'staff_demo123',
+        email: DEMO_EMAIL,
+        name: 'Front Desk Receptionist',
+        role: 'staff',
+      };
+      sessionStorage.setItem('isAdmin', 'true');
+      sessionStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(demoUser));
+      return demoUser;
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
       password: pass,

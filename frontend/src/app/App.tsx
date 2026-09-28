@@ -15,7 +15,9 @@ import { DoctorDashboard } from "../pages/doctor/DoctorDashboard";
 import { ReceptionistDashboard } from "../pages/receptionist/ReceptionistDashboard";
 
 import { queueService } from "../services/queueService";
+import { appointmentClient } from "../services/appointmentService";
 import { QueueItem } from "../types";
+
 
 export type PageRoute = 
   | "landing" 
@@ -40,8 +42,11 @@ export default function App() {
 
   const goHome = () => setPage("landing");
 
-  const handleCancelAppointment = (id: string) => {
+  const handleCancelAppointment = async (id: string) => {
     if (!window.confirm("Are you sure you want to cancel this appointment?")) return;
+    try {
+      await appointmentClient.cancelAppointment(id);
+    } catch (e) {}
     const currentQueue = queueService.getLocalQueue();
     const updated = currentQueue.filter(x => x.id !== id);
     queueService.setLocalQueue(updated);
@@ -50,12 +55,23 @@ export default function App() {
 
   const handleRescheduleAppointment = (id: string) => {
     const currentQueue = queueService.getLocalQueue();
-    const apt = currentQueue.find(x => x.id === id);
-    if (apt) setReschedulingAppointment(apt);
+    const apt = currentQueue.find(x => x.id === id) || {
+      id,
+      name: currentUserEmail.split('@')[0],
+      phone: currentUserEmail,
+      scheduled: 'Tomorrow • 11:00 AM',
+      type: 'Online' as const,
+      status: 'Waiting' as const
+    };
+    setReschedulingAppointment(apt);
   };
 
-  const confirmReschedule = (newTime: string) => {
+  const confirmReschedule = async (newTime: string) => {
     if (!reschedulingAppointment) return;
+    try {
+      await appointmentClient.rescheduleAppointment(reschedulingAppointment.id, newTime);
+    } catch (e) {}
+
     const currentQueue = queueService.getLocalQueue();
     const updated = currentQueue.map(x => x.id === reschedulingAppointment.id ? { ...x, scheduled: newTime } : x);
     queueService.setLocalQueue(updated);

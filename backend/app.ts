@@ -56,9 +56,15 @@ app.get("/test-db", async (req, res) => {
     });
 });
 
+import appointmentRoutes from "./src/routes/appointmentRoutes";
+import { appointmentController } from "./src/controllers/appointmentController";
+
 app.use("/api/queue", queueRoutes);
 app.use("/api/walk-ins", walkInRoutes);
 app.use("/api/walkins", walkInRoutes);
+app.use("/api/appointments", appointmentRoutes);
+app.get("/api/clinics", (req, res) => appointmentController.getClinics(req, res));
+app.get("/api/doctors", (req, res) => appointmentController.getDoctors(req, res));
 app.use("/api", apiRouter);
 
 export default app;

@@ -88,12 +88,13 @@ export class QueueController {
   }
 
   /**
-   * GET /api/queue/my
+   * GET /api/queue/my (Protected)
    */
   async getMyQueueStatus(req: Request, res: Response) {
     try {
-      const patientId = (req.query.patient_id || req.query.id || req.query.phone || req.query.email) as string;
-      const status = await queueService.getMyQueueStatus(patientId);
+      // Golden Rule: Authenticated user from verified JWT token
+      const authenticatedUserIdentifier = req.user?.email || req.user?.id || (req.query.patient_id as string);
+      const status = await queueService.getMyQueueStatus(authenticatedUserIdentifier);
       return res.status(200).json(status);
     } catch (error) {
       return res.status(500).json({

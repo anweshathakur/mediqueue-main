@@ -1,18 +1,17 @@
 import { Router } from "express";
 import { queueController } from "../controllers/queueController";
+import { requireAuth } from "../middleware/authMiddleware";
 
 const router = Router();
 
-// Retrieve live patient queue status
-router.get("/my", (req, res) => queueController.getMyQueueStatus(req, res));
+// Protect all private queue operations
+router.get("/my", requireAuth, (req, res) => queueController.getMyQueueStatus(req, res));
+router.get("/:doctorId", requireAuth, (req, res) => queueController.getDoctorQueue(req, res));
+router.get("/", requireAuth, (req, res) => queueController.getDoctorQueue(req, res));
 
-// Retrieve doctor queue (GET /api/queue/:doctorId or GET /api/queue)
-router.get("/:doctorId", (req, res) => queueController.getDoctorQueue(req, res));
-router.get("/", (req, res) => queueController.getDoctorQueue(req, res));
-
-// Doctor queue actions
-router.post("/:queueEntryId/call", (req, res) => queueController.callPatient(req, res));
-router.post("/:queueEntryId/start", (req, res) => queueController.startConsultation(req, res));
-router.post("/:queueEntryId/complete", (req, res) => queueController.completeConsultation(req, res));
+// Doctor actions
+router.post("/:queueEntryId/call", requireAuth, (req, res) => queueController.callPatient(req, res));
+router.post("/:queueEntryId/start", requireAuth, (req, res) => queueController.startConsultation(req, res));
+router.post("/:queueEntryId/complete", requireAuth, (req, res) => queueController.completeConsultation(req, res));
 
 export default router;

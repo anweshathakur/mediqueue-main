@@ -1,18 +1,17 @@
 import { Router } from "express";
 import { appointmentController } from "../controllers/appointmentController";
+import { requireAuth } from "../middleware/authMiddleware";
 
 const router = Router();
 
-// 1. Get clinics: GET /api/clinics (handled directly or mounted)
-// 2. Get doctors: GET /api/doctors
-// 3. Appointments endpoints:
-router.get("/my", (req, res) => appointmentController.getMyAppointments(req, res));
-router.get("/", (req, res) => appointmentController.getMyAppointments(req, res));
-router.post("/", (req, res) => appointmentController.bookAppointment(req, res));
-router.post("/:id/check-in", (req, res) => appointmentController.checkInAppointment(req, res));
-router.post("/:id/checkin", (req, res) => appointmentController.checkInAppointment(req, res));
-router.patch("/:id/reschedule", (req, res) => appointmentController.rescheduleAppointment(req, res));
-router.patch("/:id/cancel", (req, res) => appointmentController.cancelAppointment(req, res));
-router.delete("/:id", (req, res) => appointmentController.cancelAppointment(req, res));
+// Protected appointment endpoints
+router.get("/my", requireAuth, (req, res) => appointmentController.getMyAppointments(req, res));
+router.get("/", requireAuth, (req, res) => appointmentController.getMyAppointments(req, res));
+router.post("/", requireAuth, (req, res) => appointmentController.bookAppointment(req, res));
+router.post("/:id/check-in", requireAuth, (req, res) => appointmentController.checkInAppointment(req, res));
+router.post("/:id/checkin", requireAuth, (req, res) => appointmentController.checkInAppointment(req, res));
+router.patch("/:id/reschedule", requireAuth, (req, res) => appointmentController.rescheduleAppointment(req, res));
+router.patch("/:id/cancel", requireAuth, (req, res) => appointmentController.cancelAppointment(req, res));
+router.delete("/:id", requireAuth, (req, res) => appointmentController.cancelAppointment(req, res));
 
 export default router;

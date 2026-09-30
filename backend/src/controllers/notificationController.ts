@@ -4,7 +4,7 @@ import { notificationService } from "../services/notificationService";
 export class NotificationController {
   async getNotifications(req: Request, res: Response) {
     try {
-      const patientId = (req.query.patient_id || req.query.email || req.query.phone || "demo123@gmail.com") as string;
+      const patientId = req.user?.email || req.user?.id || (req.query.patient_id as string) || "demo123@gmail.com";
       const list = await notificationService.getPatientNotifications(patientId);
       return res.status(200).json(list);
     } catch (error) {
@@ -33,7 +33,7 @@ export class NotificationController {
 
   async markAllAsRead(req: Request, res: Response) {
     try {
-      const patientId = (req.body?.patient_id || req.query.patient_id || "demo123@gmail.com") as string;
+      const patientId = req.user?.email || req.user?.id || (req.body?.patient_id as string) || "demo123@gmail.com";
       const result = await notificationService.markAllAsRead(patientId);
       return res.status(200).json({ message: "All marked as read", ...result });
     } catch (error) {

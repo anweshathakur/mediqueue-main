@@ -2,9 +2,6 @@ import { notificationRepository, NotificationRecord } from "../repositories/noti
 import { supabase } from "../config/supabase";
 
 export class NotificationService {
-  /**
-   * Create an in-app notification & broadcast event live over Supabase Realtime
-   */
   async createNotification(payload: {
     patient_id: string;
     appointment_id?: string | null;
@@ -15,7 +12,6 @@ export class NotificationService {
   }): Promise<NotificationRecord> {
     const notif = await notificationRepository.createNotification(payload);
 
-    // Broadcast live over Realtime channel
     try {
       const channel = supabase.channel("mediqueue-live-events");
       await channel.send({
@@ -26,6 +22,10 @@ export class NotificationService {
     } catch (e) {}
 
     return notif;
+  }
+
+  async getNotificationById(id: string): Promise<NotificationRecord | null> {
+    return notificationRepository.getNotificationById(id);
   }
 
   async getPatientNotifications(patientIdentifier?: string): Promise<NotificationRecord[]> {
@@ -40,8 +40,6 @@ export class NotificationService {
     const count = await notificationRepository.markAllAsRead(patientIdentifier);
     return { count };
   }
-
-  // --- Domain Event Triggers ---
 
   async notifyAppointmentConfirmed(appointment: {
     patient_id?: string;
@@ -101,7 +99,7 @@ export class NotificationService {
     });
   }
 
-  async notifyPatientCalled(queueEntry: {
+  async notifyCalled(queueEntry: {
     id: string;
     patient_id: string;
     doctor_name?: string;
@@ -114,12 +112,12 @@ export class NotificationService {
     return this.createNotification({
       patient_id: patientId,
       queue_entry_id: queueEntry.id,
-      title: "Doctor Calling Your Token",
-      message: `${docName} has called you. Please proceed to ${room}.`,
+      title: "You Have Been Called",
+      message: `Your turn is up! Please proceed to ${room} with ${docName}.`,
     });
   }
 
-  async notifyConsultationCompleted(queueEntry: {
+  async notifyCompleted(queueEntry: {
     id: string;
     patient_id: string;
     doctor_name?: string;
@@ -131,7 +129,7 @@ export class NotificationService {
       patient_id: patientId,
       queue_entry_id: queueEntry.id,
       title: "Consultation Completed",
-      message: `Your consultation with ${docName} has been completed. Prescriptions & telemetry logged.`,
+      message: `Your consultation with ${docName} has been completed. Thank you!`,
     });
   }
 }

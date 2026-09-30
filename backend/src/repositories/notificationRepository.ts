@@ -81,10 +81,8 @@ export class NotificationRepository {
       created_at,
     };
 
-    // 1. Store in memory
     notificationMemoryStore.set(id, record);
 
-    // 2. Persist to Supabase if database table is available
     try {
       await supabase.from("notifications").insert([
         {
@@ -105,6 +103,36 @@ export class NotificationRepository {
     return record;
   }
 
+  async getNotificationById(id: string): Promise<NotificationRecord | null> {
+    const record = notificationMemoryStore.get(id);
+    if (record) return record;
+
+    try {
+      const { data } = await supabase
+        .from("notifications")
+        .select("*")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (data) {
+        return {
+          id: data.id,
+          patient_id: data.patient_id,
+          appointment_id: data.appointment_id,
+          queue_entry_id: data.queue_entry_id,
+          channel: data.channel || "in_app",
+          title: data.title || "Queue Notification",
+          message: data.message,
+          status: data.status === "read" ? "read" : "unread",
+          read_at: data.read_at,
+          created_at: data.created_at,
+        };
+      }
+    } catch {}
+
+    return null;
+  }
+
   async getNotificationsByPatient(patientIdentifier?: string): Promise<NotificationRecord[]> {
     const all = Array.from(notificationMemoryStore.values());
 
@@ -115,9 +143,7 @@ export class NotificationRepository {
     const filtered = all.filter(
       (n) =>
         n.patient_id === patientIdentifier ||
-        patientIdentifier.includes(n.patient_id) ||
-        n.patient_id.includes(patientIdentifier) ||
-        n.patient_id === "demo123@gmail.com"
+        n.patient_id.toLowerCase() === patientIdentifier.toLowerCase()
     );
 
     return filtered.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
@@ -141,7 +167,7 @@ export class NotificationRepository {
       if (
         !patientIdentifier ||
         item.patient_id === patientIdentifier ||
-        item.patient_id === "demo123@gmail.com"
+        item.patient_id.toLowerCase() === patientIdentifier.toLowerCase()
       ) {
         if (item.status !== "read") {
           item.status = "read";

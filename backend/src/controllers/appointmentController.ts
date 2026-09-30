@@ -1,10 +1,9 @@
 import { Request, Response } from "express";
 import { appointmentService } from "../services/appointmentService";
+import { appointmentRepository } from "../repositories/appointmentRepository";
+import { isOwnerOrPrivileged } from "../utils/ownership";
 
 export class AppointmentController {
-  /**
-   * GET /api/clinics
-   */
   async getClinics(req: Request, res: Response) {
     try {
       const clinics = await appointmentService.getClinics();
@@ -17,9 +16,6 @@ export class AppointmentController {
     }
   }
 
-  /**
-   * GET /api/doctors?clinic_id=...
-   */
   async getDoctors(req: Request, res: Response) {
     try {
       const clinicId = req.query.clinic_id as string;
@@ -33,9 +29,6 @@ export class AppointmentController {
     }
   }
 
-  /**
-   * POST /api/appointments
-   */
   async bookAppointment(req: Request, res: Response) {
     try {
       const {
@@ -54,13 +47,21 @@ export class AppointmentController {
         });
       }
 
+      // IDOR Protection: For patient roles, bind patient_id directly to authenticated user
+      const userRole = (req.user?.role || (req.user as any)?.appRole || "patient").toLowerCase();
+      let effectivePatientId = patient_id;
+
+      if (userRole === "patient" || (!userRole || userRole === "authenticated")) {
+        effectivePatientId = req.user?.id || req.user?.email || patient_id || "patient-anon";
+      }
+
       const appointment = await appointmentService.bookAppointment({
         clinic_id,
-        patient_id: patient_id || "patient-anon",
+        patient_id: effectivePatientId,
         doctor_id,
         scheduled_at,
         reason,
-        patient_name,
+        patient_name: patient_name || req.user?.user_metadata?.name || req.user?.user_metadata?.full_name,
         patient_phone,
       });
 
@@ -77,12 +78,18 @@ export class AppointmentController {
     }
   }
 
-  /**
-   * GET /api/appointments/my or GET /api/appointments
-   */
   async getMyAppointments(req: Request, res: Response) {
     try {
-      const patientId = (req.query.patient_id || req.query.email || req.query.phone) as string;
+      const userRole = (req.user?.role || (req.user as any)?.appRole || "patient").toLowerCase();
+      
+      // IDOR Protection: Regular patients can ONLY view their own appointments
+      let patientId = req.user?.email || req.user?.id || "demo123@gmail.com";
+      
+      // Only privileged staff/admins can query another patient's appointments via query param
+      if ((userRole === "admin" || userRole === "receptionist" || userRole === "staff") && req.query.patient_id) {
+        patientId = req.query.patient_id as string;
+      }
+
       const appointments = await appointmentService.getMyAppointments(patientId);
       return res.status(200).json(appointments);
     } catch (error) {
@@ -93,9 +100,6 @@ export class AppointmentController {
     }
   }
 
-  /**
-   * PATCH /api/appointments/:id/reschedule
-   */
   async rescheduleAppointment(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -103,6 +107,19 @@ export class AppointmentController {
 
       if (!scheduled_at) {
         return res.status(400).json({ message: "scheduled_at is required" });
+      }
+
+      const existing = await appointmentRepository.getAppointmentById(id);
+      if (!existing) {
+        return res.status(404).json({ message: `Appointment ${id} not found` });
+      }
+
+      // IDOR Protection: Verify ownership
+      if (!isOwnerOrPrivileged(req.user, existing.patient_id, existing.patient?.email)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Access denied. You can only reschedule your own appointments.",
+        });
       }
 
       const updated = await appointmentService.rescheduleAppointment(id, scheduled_at);
@@ -118,12 +135,23 @@ export class AppointmentController {
     }
   }
 
-  /**
-   * PATCH /api/appointments/:id/cancel or DELETE /api/appointments/:id
-   */
   async cancelAppointment(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      const existing = await appointmentRepository.getAppointmentById(id);
+      
+      if (!existing) {
+        return res.status(404).json({ message: `Appointment ${id} not found` });
+      }
+
+      // IDOR Protection: Verify ownership
+      if (!isOwnerOrPrivileged(req.user, existing.patient_id, existing.patient?.email)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Access denied. You can only cancel your own appointments.",
+        });
+      }
+
       const cancelled = await appointmentService.cancelAppointment(id);
       return res.status(200).json({
         message: "Appointment cancelled successfully",
@@ -137,19 +165,27 @@ export class AppointmentController {
     }
   }
 
-  /**
-   * POST /api/appointments/:id/check-in
-   */
   async checkInAppointment(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const patientId = (req.body?.patient_id || req.query?.patient_id) as string;
-
       if (!id) {
         return res.status(400).json({ message: "Appointment ID is required" });
       }
 
-      const result = await appointmentService.checkInAppointment(id, patientId);
+      const existing = await appointmentRepository.getAppointmentById(id);
+      if (!existing) {
+        return res.status(404).json({ message: `Appointment ${id} not found` });
+      }
+
+      // IDOR Protection: Verify ownership
+      if (!isOwnerOrPrivileged(req.user, existing.patient_id, existing.patient?.email)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Access denied. You can only check in for your own appointments.",
+        });
+      }
+
+      const result = await appointmentService.checkInAppointment(id, existing.patient_id);
       return res.status(200).json(result);
     } catch (error) {
       return res.status(500).json({

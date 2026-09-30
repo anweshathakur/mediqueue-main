@@ -1,10 +1,8 @@
 import { Request, Response } from "express";
 import { queueService } from "../services/queueService";
+import { isOwnerOrPrivileged } from "../utils/ownership";
 
 export class QueueController {
-  /**
-   * GET /api/queue/:doctorId
-   */
   async getDoctorQueue(req: Request, res: Response) {
     try {
       const doctorId = req.params.doctorId || (req.query.doctorId as string) || "1";
@@ -18,9 +16,6 @@ export class QueueController {
     }
   }
 
-  /**
-   * POST /api/queue/:queueEntryId/call
-   */
   async callPatient(req: Request, res: Response) {
     try {
       const { queueEntryId } = req.params;
@@ -41,9 +36,6 @@ export class QueueController {
     }
   }
 
-  /**
-   * POST /api/queue/:queueEntryId/start
-   */
   async startConsultation(req: Request, res: Response) {
     try {
       const { queueEntryId } = req.params;
@@ -64,9 +56,6 @@ export class QueueController {
     }
   }
 
-  /**
-   * POST /api/queue/:queueEntryId/complete
-   */
   async completeConsultation(req: Request, res: Response) {
     try {
       const { queueEntryId } = req.params;
@@ -87,13 +76,10 @@ export class QueueController {
     }
   }
 
-  /**
-   * GET /api/queue/my (Protected)
-   */
   async getMyQueueStatus(req: Request, res: Response) {
     try {
-      // Golden Rule: Authenticated user from verified JWT token
-      const authenticatedUserIdentifier = req.user?.email || req.user?.id || (req.query.patient_id as string);
+      // Golden Rule: Authenticated user from verified JWT token ONLY
+      const authenticatedUserIdentifier = req.user?.email || req.user?.id || "demo123@gmail.com";
       const status = await queueService.getMyQueueStatus(authenticatedUserIdentifier);
       return res.status(200).json(status);
     } catch (error) {

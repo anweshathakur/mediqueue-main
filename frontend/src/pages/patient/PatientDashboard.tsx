@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { appointmentClient, Appointment, PatientLiveQueueResponse } from '../../services/appointmentService';
 import { useTheme } from '../../context/ThemeContext';
+import { NotificationBell } from '../../components/NotificationBell';
 import { realtimeService, RealtimeStatus } from '../../services/realtimeService';
 
 interface PatientDashboardProps {
@@ -151,6 +152,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({
         </div>
 
         <div className="flex items-center gap-3">
+          <NotificationBell userEmail={userEmail} />
           <button
             onClick={onLogout}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-md font-semibold text-xs transition-colors cursor-pointer ${

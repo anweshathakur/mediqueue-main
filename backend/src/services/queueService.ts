@@ -1,6 +1,7 @@
 import { queueRepository, QueueEntryRecord, ConsultationRecord } from "../repositories/queueRepository";
 import { appointmentStore } from "../repositories/appointmentRepository";
 import { etaService } from "./etaService";
+import { notificationService } from "./notificationService";
 
 export interface QueueItemResponse {
   id: string;
@@ -97,7 +98,16 @@ export class QueueService {
    * Action: Call next patient (waiting -> called)
    */
   async callNextPatient(queueEntryId: string): Promise<QueueEntryRecord> {
-    return queueRepository.updateStatus(queueEntryId, "called", "called_at");
+    const updated = await queueRepository.updateStatus(queueEntryId, "called", "called_at");
+    try {
+      await notificationService.notifyPatientCalled({
+        id: updated.id,
+        patient_id: updated.patient_id,
+        doctor_name: updated.doctor_name || "Dr. Arjun Mehta",
+        room_number: "Room 204",
+      });
+    } catch (e) {}
+    return updated;
   }
 
   /**
@@ -147,6 +157,14 @@ export class QueueService {
       queueEntryId,
       completed_at
     );
+
+    try {
+      await notificationService.notifyConsultationCompleted({
+        id: updatedQueueEntry.id,
+        patient_id: updatedQueueEntry.patient_id,
+        doctor_name: updatedQueueEntry.doctor_name || "Dr. Arjun Mehta",
+      });
+    } catch (e) {}
 
     return {
       queueEntry: updatedQueueEntry,

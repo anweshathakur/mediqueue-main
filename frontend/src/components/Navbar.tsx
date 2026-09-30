@@ -1,6 +1,7 @@
 import React from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { ThemeToggle } from './ThemeToggle';
+import { NotificationBell } from './NotificationBell';
 
 interface NavbarProps {
   onLogoClick: () => void;
@@ -107,6 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({ onLogoClick, currentPage = 'land
 
         {/* Action Controls + Theme Toggle */}
         <div className="flex items-center gap-2.5">
+          <NotificationBell />
           <ThemeToggle />
 
           <button

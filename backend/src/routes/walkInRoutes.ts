@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { createWalkIn } from "../controllers/walkInController";
-import { requireAuth } from "../middleware/authMiddleware";
+import { requireAuth, requireRole } from "../middleware/authMiddleware";
 
 const router = Router();
 
-router.post("/", requireAuth, createWalkIn);
+// Walk-in registration: Receptionist/Staff or Admin ONLY
+router.post("/", requireAuth, requireRole("receptionist", "staff", "admin"), createWalkIn);
 
 export default router;

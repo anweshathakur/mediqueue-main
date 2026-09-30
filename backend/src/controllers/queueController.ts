@@ -1,11 +1,21 @@
 import { Request, Response } from "express";
 import { queueService } from "../services/queueService";
-import { isOwnerOrPrivileged } from "../utils/ownership";
+import { hasClinicAccess, getDoctorClinicId, getQueueEntryClinicId } from "../utils/clinicIsolation";
 
 export class QueueController {
   async getDoctorQueue(req: Request, res: Response) {
     try {
       const doctorId = req.params.doctorId || (req.query.doctorId as string) || "1";
+      
+      // Multi-tenancy check: verify doctor's clinic belongs to requesting user's clinic
+      const docClinicId = await getDoctorClinicId(doctorId);
+      if (docClinicId && !hasClinicAccess(req.user, docClinicId)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Access denied. You cannot access queue data for a doctor at another clinic.",
+        });
+      }
+
       const queue = await queueService.getDoctorQueue(doctorId);
       return res.status(200).json(queue);
     } catch (error) {
@@ -21,6 +31,15 @@ export class QueueController {
       const { queueEntryId } = req.params;
       if (!queueEntryId) {
         return res.status(400).json({ message: "queueEntryId parameter is required" });
+      }
+
+      // Multi-tenancy check: verify queue entry belongs to caller's clinic
+      const qClinicId = await getQueueEntryClinicId(queueEntryId);
+      if (qClinicId && !hasClinicAccess(req.user, qClinicId)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Access denied. You cannot manage queue entries belonging to another clinic.",
+        });
       }
 
       const updated = await queueService.callNextPatient(queueEntryId);
@@ -43,6 +62,15 @@ export class QueueController {
         return res.status(400).json({ message: "queueEntryId parameter is required" });
       }
 
+      // Multi-tenancy check
+      const qClinicId = await getQueueEntryClinicId(queueEntryId);
+      if (qClinicId && !hasClinicAccess(req.user, qClinicId)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Access denied. You cannot manage queue entries belonging to another clinic.",
+        });
+      }
+
       const result = await queueService.startConsultation(queueEntryId);
       return res.status(200).json({
         message: "Consultation started successfully",
@@ -63,6 +91,15 @@ export class QueueController {
         return res.status(400).json({ message: "queueEntryId parameter is required" });
       }
 
+      // Multi-tenancy check
+      const qClinicId = await getQueueEntryClinicId(queueEntryId);
+      if (qClinicId && !hasClinicAccess(req.user, qClinicId)) {
+        return res.status(403).json({
+          error: "Forbidden",
+          message: "Access denied. You cannot manage queue entries belonging to another clinic.",
+        });
+      }
+
       const result = await queueService.completeConsultation(queueEntryId);
       return res.status(200).json({
         message: "Consultation completed successfully",
@@ -78,7 +115,6 @@ export class QueueController {
 
   async getMyQueueStatus(req: Request, res: Response) {
     try {
-      // Golden Rule: Authenticated user from verified JWT token ONLY
       const authenticatedUserIdentifier = req.user?.email || req.user?.id || "demo123@gmail.com";
       const status = await queueService.getMyQueueStatus(authenticatedUserIdentifier);
       return res.status(200).json(status);

@@ -90,6 +90,21 @@ export const memoryStore = {
 
   queueEntries: new Map<string, QueueEntryRecord>([
     [
+      "q-clinic-b-1",
+      {
+        id: "q-clinic-b-1",
+        clinic_id: "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22",
+        patient_id: "p-201",
+        doctor_id: "6",
+        doctor_name: "Dr. Kabir Das",
+        priority: "normal",
+        status: "waiting",
+        joined_at: new Date().toISOString(),
+        called_at: null,
+        completed_at: null,
+      },
+    ],
+    [
       "q-101",
       {
         id: "q-101",

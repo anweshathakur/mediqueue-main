@@ -3,6 +3,9 @@ import { supabase } from "../config/supabase";
 
 export type MediQueueRole = "patient" | "doctor" | "receptionist" | "staff" | "admin";
 
+export const CLINIC_A_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11";
+export const CLINIC_B_ID = "a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a22";
+
 /**
  * Normalizes role names (e.g. 'staff' is treated as 'receptionist')
  */
@@ -44,12 +47,20 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
         role = customRole;
       }
 
+      let clinicId = CLINIC_A_ID;
+      if (req.headers["x-demo-clinic"]) {
+        clinicId = req.headers["x-demo-clinic"] as string;
+      } else if (token.includes("clinic-b") || token.includes("clinicb")) {
+        clinicId = CLINIC_B_ID;
+      }
+
       req.user = {
         id: `demo-${role}-101`,
         email: `demo_${role}@mediqueue.com`,
         role: normalizeRole(role),
         appRole: normalizeRole(role),
-        user_metadata: { name: `Demo ${role.toUpperCase()}`, role: normalizeRole(role) },
+        clinic_id: clinicId,
+        user_metadata: { name: `Demo ${role.toUpperCase()}`, role: normalizeRole(role), clinic_id: clinicId },
       } as any;
 
       return next();
@@ -66,30 +77,56 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
       });
     }
 
-    // 3. Resolve user's actual MediQueue role (DB table takes precedence over user_metadata)
+    // 3. Resolve user's actual MediQueue role & clinic_id
     let role = data.user.user_metadata?.role || "patient";
+    let clinicId = data.user.user_metadata?.clinic_id || CLINIC_A_ID;
 
     try {
+      // Check users table
       const { data: dbUser } = await supabase
         .from("users")
-        .select("role, full_name")
+        .select("role, full_name, clinic_id")
         .eq("id", data.user.id)
         .maybeSingle();
 
       if (dbUser?.role) {
         role = dbUser.role;
       }
+      if (dbUser?.clinic_id) {
+        clinicId = dbUser.clinic_id;
+      }
+
+      // If doctor, query doctor clinic assignment
+      if (role === "doctor") {
+        const { data: docData } = await supabase
+          .from("doctors")
+          .select("clinic_id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        if (docData?.clinic_id) clinicId = docData.clinic_id;
+      }
+
+      // If staff, query staff clinic assignment
+      if (role === "receptionist" || role === "staff") {
+        const { data: staffData } = await supabase
+          .from("staff")
+          .select("clinic_id")
+          .eq("user_id", data.user.id)
+          .maybeSingle();
+        if (staffData?.clinic_id) clinicId = staffData.clinic_id;
+      }
     } catch {
-      // If DB query is unavailable, fallback to metadata role
+      // Fallback to metadata
     }
 
     const normalizedRole = normalizeRole(role);
 
-    // 4. Attach verified user & normalized role to request
+    // 4. Attach verified user, normalized role & clinic to request
     req.user = {
       ...data.user,
       role: normalizedRole,
       appRole: normalizedRole,
+      clinic_id: clinicId,
     } as any;
 
     return next();
@@ -101,11 +138,6 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
 }
 
-/**
- * Role-Based Access Control Middleware
- * Requires the authenticated user to have at least one of the specified roles.
- * Admins are granted full access across all endpoints.
- */
 export function requireRole(...allowedRoles: string[]) {
   const normalizedAllowed = allowedRoles.map((r) => normalizeRole(r));
 
@@ -119,7 +151,6 @@ export function requireRole(...allowedRoles: string[]) {
 
     const userRole = normalizeRole((req.user as any).appRole || (req.user as any).role || req.user.user_metadata?.role);
 
-    // Admins have universal superuser access
     if (userRole === "admin") {
       return next();
     }

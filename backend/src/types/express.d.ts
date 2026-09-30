@@ -11,6 +11,7 @@ declare global {
         phone?: string;
         role?: MediQueueRole | string;
         appRole?: MediQueueRole | string;
+        clinic_id?: string;
         user_metadata?: Record<string, any>;
       };
     }

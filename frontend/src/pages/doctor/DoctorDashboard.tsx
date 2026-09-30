@@ -22,6 +22,7 @@ import {
 import { DOCTORS } from '../../types';
 import { walkInClient, BackendQueueItem } from '../../services/walkInService';
 import { queueService } from '../../services/queueService';
+import { realtimeService, RealtimeStatus } from '../../services/realtimeService';
 import { useTheme } from '../../context/ThemeContext';
 
 interface DoctorDashboardProps {
@@ -59,10 +60,21 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack, onAdmi
     }
   };
 
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>('CONNECTING');
+
   useEffect(() => {
     fetchQueue();
-    const interval = setInterval(fetchQueue, 3000);
-    return () => clearInterval(interval);
+    // Subscribe to live Supabase Realtime changes
+    const unsubscribe = realtimeService.subscribe((event) => {
+      fetchQueue();
+    });
+    const unsubStatus = realtimeService.onStatusChange(setRealtimeStatus);
+    const interval = setInterval(fetchQueue, 5000);
+    return () => {
+      unsubscribe();
+      unsubStatus();
+      clearInterval(interval);
+    };
   }, [selectedDoctor]);
 
   useEffect(() => {
@@ -431,11 +443,11 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack, onAdmi
             }`}
           >
             <div className="flex justify-between items-start mb-2">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Global Delay</span>
-              <Activity className="w-4 h-4 text-amber-500" />
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Global Delay</span>
+              <Activity className="w-4 h-4 text-[#00c985]" />
             </div>
             <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-amber-500">+{globalDelay}m</span>
+              <span className={`text-3xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>+{globalDelay}m</span>
               <span className={`text-xs font-medium ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>on schedule</span>
             </div>
           </div>
@@ -577,7 +589,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack, onAdmi
                                 : 'bg-white hover:bg-slate-100 border-slate-300 text-slate-700 shadow-xs'
                             }`}
                           >
-                            <Bell className="w-3.5 h-3.5 text-amber-500" /> Call Patient
+                            <Bell className="w-3.5 h-3.5 text-[#00c985]" /> Call Patient
                           </button>
                           <button
                             onClick={() => handleStart(currentPatient)}
@@ -731,8 +743,8 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack, onAdmi
                   onClick={() => addGlobalDelay(30)}
                   className={`w-full py-2 px-3 rounded-md border font-semibold text-xs transition-colors cursor-pointer text-center ${
                     isDark
-                      ? 'bg-[#0d121c] hover:bg-slate-800 border-amber-500/30 text-amber-400'
-                      : 'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-800 shadow-xs'
+                      ? 'bg-[#0d121c] hover:bg-slate-800 border-slate-700 text-slate-200'
+                      : 'bg-white hover:bg-slate-50 border-slate-300 text-slate-700 shadow-xs'
                   }`}
                 >
                   +30m Emergency Delay
@@ -795,7 +807,7 @@ export const DoctorDashboard: React.FC<DoctorDashboardProps> = ({ onBack, onAdmi
                   onClick={() => setRoomStatus('on_break')}
                   className={`py-1.5 text-center rounded text-[11px] font-bold transition-colors cursor-pointer ${
                     roomStatus === 'on_break'
-                      ? 'bg-amber-500 text-white'
+                      ? isDark ? 'bg-slate-700 text-white' : 'bg-slate-800 text-white'
                       : isDark
                       ? 'bg-slate-900 text-slate-400 hover:text-white'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'

@@ -7,10 +7,11 @@ import {
   ArrowLeft,
   Stethoscope,
   Building2,
-  Bell,
   ShieldCheck
 } from 'lucide-react';
 import { appointmentClient, PatientLiveQueueResponse } from '../../services/appointmentService';
+import { useTheme } from '../../context/ThemeContext';
+import { realtimeService } from '../../services/realtimeService';
 
 interface LiveTrackerProps {
   appointment?: any;
@@ -27,6 +28,7 @@ export const LiveTracker: React.FC<LiveTrackerProps> = ({
   onCancel,
   onReschedule,
 }) => {
+  const { isDark } = useTheme();
   const [liveData, setLiveData] = useState<PatientLiveQueueResponse | null>(null);
 
   const fetchLiveStatus = async () => {
@@ -43,8 +45,15 @@ export const LiveTracker: React.FC<LiveTrackerProps> = ({
 
   useEffect(() => {
     fetchLiveStatus();
-    const interval = setInterval(fetchLiveStatus, 3000);
-    return () => clearInterval(interval);
+    // Live Realtime listener
+    const unsubscribe = realtimeService.subscribe((event) => {
+      fetchLiveStatus();
+    });
+    const interval = setInterval(fetchLiveStatus, 5000);
+    return () => {
+      unsubscribe();
+      clearInterval(interval);
+    };
   }, [userEmail, appointment]);
 
   const queueEntry = liveData?.queueEntry;
@@ -58,139 +67,120 @@ export const LiveTracker: React.FC<LiveTrackerProps> = ({
     address: '100 Medical Blvd, Jaipur, Rajasthan',
   };
 
+  const tokenNumber = queueEntry ? `#A-${queueEntry.position + 10}` : '#A-14';
   const position = queueEntry?.position || 1;
   const peopleAhead = queueEntry?.peopleAhead ?? Math.max(0, position - 1);
-  const currentlySeeing = queueEntry?.currentlySeeing || (position === 1 ? 'You are next' : 'In Consultation');
-  const estimatedWait = queueEntry?.estimatedWait || (peopleAhead === 0 ? 'Ready now' : `~${peopleAhead * 15} min`);
-  const status = queueEntry?.status || 'waiting';
+  const estWaitMin = queueEntry?.estimatedWaitMinutes || peopleAhead * 15;
 
   return (
-    <main className="max-w-5xl mx-auto px-6 py-10 bg-[#07090e] text-white min-h-[calc(100vh-140px)] font-sans">
-      {/* Top Header */}
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-800/80">
-        <div>
-          <h1 className="text-2xl font-bold text-white tracking-tight">Live Consultation Telemetry</h1>
-          <p className="text-slate-400 text-xs mt-1">
-            Tracking Token <span className="text-[#00e599] font-mono font-bold">#A-{position + 10}</span> • Real-Time Synchronization Active
-          </p>
-        </div>
+    <div className={`max-w-4xl mx-auto px-6 py-8 ${isDark ? 'bg-[#07090e] text-white' : 'bg-[#f8fafc] text-slate-900'} min-h-[calc(100vh-140px)] font-sans transition-colors duration-200`}>
+      <button
+        onClick={onBack}
+        className={`flex items-center gap-1.5 text-xs font-semibold mb-6 transition-colors cursor-pointer ${
+          isDark ? 'text-slate-400 hover:text-white' : 'text-slate-600 hover:text-slate-900'
+        }`}
+      >
+        <ArrowLeft className="w-3.5 h-3.5" /> Back to Appointments
+      </button>
 
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-md bg-[#0c1017] border border-slate-700 text-slate-300 font-semibold text-xs hover:text-white transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Back to Dashboard
-        </button>
-      </div>
-
-      {/* Hero Tracking Box */}
-      <div className="bg-[#0c1017] rounded-lg p-6 md:p-8 border border-slate-800 mb-6">
-        <div className="flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6 pb-4 border-b border-slate-800/80">
+      {/* Main Ticket Card */}
+      <div className={`rounded-xl p-8 border mb-6 transition-colors ${
+        isDark ? 'bg-[#0c1017] border-slate-800 shadow-xl' : 'bg-white border-slate-200 shadow-md'
+      }`}>
+        {/* Ticket Header */}
+        <div className={`flex flex-col sm:flex-row justify-between sm:items-start gap-4 mb-6 pb-4 border-b ${
+          isDark ? 'border-slate-800' : 'border-slate-100'
+        }`}>
           <div>
-            <span className="inline-block px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-[10px] font-bold text-[#00e599] uppercase tracking-wider mb-1.5">
-              Live Clinical Station
+            <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider mb-2 border ${
+              isDark ? 'bg-slate-900 border-slate-800 text-[#00e599]' : 'bg-emerald-50 border-emerald-200 text-[#009b62]'
+            }`}>
+              LIVE CLINICAL PASS
             </span>
-            <h2 className="text-xl font-bold text-white">{doctor.name}, MD</h2>
-            <p className="text-xs text-slate-400 font-medium mt-0.5">
-              {doctor.specialty} • {doctor.room_number || 'Room 204'} • {clinic.name}
-            </p>
+            <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>Consultation Telemetry Ticket</h1>
+            <p className={`text-xs mt-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{clinic.name} • {clinic.address}</p>
           </div>
 
-          <div>
-            {status === 'consulting' ? (
-              <span className="px-3 py-1 rounded bg-[#00e599]/10 border border-[#00e599]/40 text-[#00e599] text-xs font-bold flex items-center gap-1.5">
-                <CheckCircle2 className="w-3.5 h-3.5" /> In Consultation
-              </span>
-            ) : status === 'called' ? (
-              <span className="px-3 py-1 rounded bg-amber-500/10 border border-amber-500/40 text-amber-400 text-xs font-bold flex items-center gap-1.5 animate-pulse">
-                <Bell className="w-3.5 h-3.5" /> Please Enter Room
-              </span>
-            ) : (
-              <span className="px-3 py-1 rounded bg-slate-900 border border-slate-800 text-slate-300 text-xs font-semibold flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-[#00e599]" /> In Waiting Bay
-              </span>
+          <div className="text-right">
+            <span className={`text-[10px] font-bold uppercase tracking-widest block ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Assigned Token</span>
+            <span className={`text-3xl font-black font-mono ${isDark ? 'text-white' : 'text-slate-900'}`}>{tokenNumber}</span>
+          </div>
+        </div>
+
+        {/* 3 Live Telemetry Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+          <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#07090e] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <Users className="w-4 h-4 text-[#00c985]" />
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Queue Position</span>
+            </div>
+            <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>
+              {position === 1 ? 'Next in Line' : `#${position} in Line`}
+            </p>
+            <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{peopleAhead} patient{peopleAhead === 1 ? '' : 's'} ahead</p>
+          </div>
+
+          <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#07090e] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <Clock className="w-4 h-4 text-[#00c985]" />
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Estimated Wait</span>
+            </div>
+            <p className={`text-2xl font-black ${isDark ? 'text-white' : 'text-slate-900'}`}>~{estWaitMin} mins</p>
+            <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>Dynamic delay compensated</p>
+          </div>
+
+          <div className={`p-4 rounded-lg border ${isDark ? 'bg-[#07090e] border-slate-800' : 'bg-slate-50 border-slate-200'}`}>
+            <div className="flex items-center gap-2 mb-1">
+              <Activity className="w-4 h-4 text-[#00c985]" />
+              <span className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Station Status</span>
+            </div>
+            <p className={`text-base font-bold capitalize mt-1 ${
+              queueEntry?.status === 'consulting' ? 'text-[#00c985]' : isDark ? 'text-white' : 'text-slate-900'
+            }`}>
+              {queueEntry?.status === 'consulting' ? 'In Examination' : queueEntry?.status === 'called' ? 'Called to Room' : 'Waiting in Lobby'}
+            </p>
+            <p className={`text-[11px] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>{doctor.room_number || 'Room 204'}</p>
+          </div>
+        </div>
+
+        {/* Physician Banner */}
+        <div className={`p-4 rounded-lg border flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-6 ${
+          isDark ? 'bg-[#07090e] border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`}>
+          <div className="flex items-center gap-3">
+            <div className={`w-10 h-10 rounded-lg border flex items-center justify-center text-[#00c985] ${
+              isDark ? 'bg-slate-900 border-slate-700' : 'bg-white border-slate-200 shadow-xs'
+            }`}>
+              <Stethoscope className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>{doctor.name}, MD</h3>
+              <p className={`text-xs ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>{doctor.specialty} • {doctor.room_number || 'Room 204'}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            {onReschedule && (
+              <button
+                onClick={onReschedule}
+                className={`px-3 py-1.5 rounded-lg border font-semibold text-xs transition-colors cursor-pointer ${
+                  isDark ? 'bg-[#0c1017] border-slate-700 text-slate-300 hover:text-white' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-100'
+                }`}
+              >
+                Reschedule Slot
+              </button>
+            )}
+            {onCancel && (
+              <button
+                onClick={onCancel}
+                className="px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 font-semibold text-xs hover:bg-red-500/20 transition-colors cursor-pointer"
+              >
+                Cancel Ticket
+              </button>
             )}
           </div>
         </div>
-
-        {/* Estimated Wait Box */}
-        <div className="p-6 rounded-md bg-[#07090e] border border-slate-800 text-center mb-6">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-widest block mb-1">
-            Estimated Room Entry
-          </span>
-          <div className="flex items-center justify-center gap-3">
-            <Clock className="w-8 h-8 text-[#00e599]" />
-            <span className="text-4xl md:text-5xl font-black text-white font-mono tracking-tight">{estimatedWait}</span>
-          </div>
-          <p className="text-[11px] text-slate-500 mt-2 font-medium">
-            Calculated from physician's live average pace and active consultation duration.
-          </p>
-        </div>
-
-        {/* Progress Bar */}
-        <div className="space-y-1.5">
-          <div className="flex justify-between text-xs font-bold">
-            <span className="text-slate-400">Queue Progression</span>
-            <span className="text-[#00e599]">Position #{position}</span>
-          </div>
-          <div className="w-full h-2.5 bg-slate-900 border border-slate-800 rounded-sm overflow-hidden">
-            <div
-              className="h-full bg-[#00e599] transition-all duration-500"
-              style={{ width: `${Math.max(15, Math.min(100, (1 - peopleAhead / Math.max(1, position + 3)) * 100))}%` }}
-            />
-          </div>
-        </div>
       </div>
-
-      {/* 3 Metric Cards */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
-        <div className="bg-[#0c1017] rounded-lg p-5 border border-slate-800 text-center">
-          <Activity className="w-5 h-5 mx-auto mb-1.5 text-[#00e599]" />
-          <p className="text-2xl font-black text-white font-mono">#{position}</p>
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Your Position</p>
-        </div>
-
-        <div className="bg-[#0c1017] rounded-lg p-5 border border-slate-800 text-center">
-          <Users className="w-5 h-5 mx-auto mb-1.5 text-blue-400" />
-          <p className="text-2xl font-black text-white font-mono">{peopleAhead}</p>
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">People Ahead</p>
-        </div>
-
-        <div className="bg-[#0c1017] rounded-lg p-5 border border-slate-800 text-center">
-          <CheckCircle2 className="w-5 h-5 mx-auto mb-1.5 text-emerald-400" />
-          <p className="text-sm md:text-base font-bold text-white truncate px-1 mt-1">{currentlySeeing}</p>
-          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Currently Seeing</p>
-        </div>
-      </div>
-
-      {/* Bottom Controls */}
-      <div className="flex justify-between items-center pt-2">
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1.5 px-4 py-2 rounded-md bg-[#0c1017] border border-slate-700 text-slate-300 font-semibold text-xs hover:text-white transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" /> Return to Portal
-        </button>
-
-        <div className="flex items-center gap-2">
-          {onReschedule && (
-            <button
-              onClick={onReschedule}
-              className="px-3.5 py-2 rounded-md bg-[#0d121c] hover:bg-slate-800 border border-slate-700 text-slate-300 font-semibold text-xs transition-colors cursor-pointer"
-            >
-              Reschedule
-            </button>
-          )}
-          {onCancel && (
-            <button
-              onClick={onCancel}
-              className="px-3.5 py-2 rounded-md bg-[#0d121c] hover:bg-red-500/10 border border-red-500/30 text-red-400 font-semibold text-xs transition-colors cursor-pointer"
-            >
-              Cancel Visit
-            </button>
-          )}
-        </div>
-      </div>
-    </main>
+    </div>
   );
 };

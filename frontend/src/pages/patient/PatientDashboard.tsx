@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { appointmentClient, Appointment, PatientLiveQueueResponse } from '../../services/appointmentService';
 import { useTheme } from '../../context/ThemeContext';
+import { realtimeService, RealtimeStatus } from '../../services/realtimeService';
 
 interface PatientDashboardProps {
   userEmail: string;
@@ -63,13 +64,24 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({
     setIsLoading(false);
   };
 
+  const [realtimeStatus, setRealtimeStatus] = useState<RealtimeStatus>('CONNECTING');
+
   useEffect(() => {
     refreshAll();
+    // Live Supabase Realtime subscription
+    const unsubscribe = realtimeService.subscribe((event) => {
+      refreshAll();
+    });
+    const unsubStatus = realtimeService.onStatusChange(setRealtimeStatus);
     const interval = setInterval(() => {
       fetchAppointments();
       fetchLiveQueue();
-    }, 4000);
-    return () => clearInterval(interval);
+    }, 6000);
+    return () => {
+      unsubscribe();
+      unsubStatus();
+      clearInterval(interval);
+    };
   }, [userEmail]);
 
   const handleCheckIn = async (appointmentId: string) => {
@@ -134,7 +146,7 @@ export const PatientDashboard: React.FC<PatientDashboardProps> = ({
           <h1 className={`text-2xl font-bold tracking-tight ${isDark ? 'text-white' : 'text-slate-900'}`}>My Active Appointments</h1>
           <p className={`text-xs mt-1 flex items-center gap-2 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
             <span className="w-2 h-2 rounded-full bg-[#00e599]"></span>
-            Authenticated as <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{userEmail || 'demo123@gmail.com'}</span> • Live Telemetry Active
+            Authenticated as <span className={`font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{userEmail || 'demo123@gmail.com'}</span> • ⚡ Live Realtime Connected
           </p>
         </div>
 

@@ -3,12 +3,14 @@ import { User, Phone, Flame, PlusCircle, RefreshCw } from 'lucide-react';
 import { DEPARTMENTS, DOCTORS, QueueItem } from '../../types';
 import { walkInClient } from '../../services/walkInService';
 import { queueService } from '../../services/queueService';
+import { useTheme } from '../../context/ThemeContext';
 
 interface WalkInIntakeProps {
   onWalkInAdded: (item: QueueItem) => void;
 }
 
 export const WalkInIntake: React.FC<WalkInIntakeProps> = ({ onWalkInAdded }) => {
+  const { isDark } = useTheme();
   const [phone, setPhone] = useState('');
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -58,42 +60,29 @@ export const WalkInIntake: React.FC<WalkInIntakeProps> = ({ onWalkInAdded }) => 
         registeredToken = {
           id: String(res.data.token_number || res.data.id),
           rawId: res.data.id,
-          name: res.data.patient_name || res.data.name,
-          phone: res.data.phone,
-          age: res.data.age,
+          name: res.data.patient_name || name,
+          phone: res.data.phone || phone,
+          age: res.data.age || (Number(age) || 30),
           type: 'Walk-in',
-          scheduled:
-            res.data.scheduled_time ||
-            (priority
-              ? 'Immediate'
-              : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })),
+          scheduled: priority ? 'Immediate' : 'In Queue',
           status: 'Waiting',
           doctor_name: res.data.doctor_name || assignedDoctor,
           department: res.data.department || specialty,
-          priority: Boolean(res.data.priority),
+          priority,
         };
       }
     } catch (err) {
-      console.warn('Backend walkin API fallback:', err);
+      console.warn('Backend intake fallback to local memory state:', err);
     }
 
     if (!registeredToken) {
-      const currentQueue = queueService.getLocalQueue();
-      const maxToken =
-        currentQueue.length > 0
-          ? Math.max(...currentQueue.map((q) => parseInt(q.id) || 100))
-          : 100;
-      const newToken = maxToken + 1;
       registeredToken = {
-        id: newToken.toString(),
-        rawId: newToken.toString(),
+        id: String(Math.floor(Math.random() * 90) + 10),
         name,
-        phone: phone.replace(/(\d{3})(\d{3})(\d{4})/, '$1-$2-$3'),
+        phone,
         age: Number(age) || 30,
         type: 'Walk-in',
-        scheduled: priority
-          ? 'Immediate'
-          : new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        scheduled: priority ? 'Immediate' : 'In Queue',
         status: 'Waiting',
         doctor_name: assignedDoctor,
         department: specialty,
@@ -102,7 +91,6 @@ export const WalkInIntake: React.FC<WalkInIntakeProps> = ({ onWalkInAdded }) => 
     }
 
     onWalkInAdded(registeredToken);
-
     setPhone('');
     setName('');
     setAge('');
@@ -111,119 +99,130 @@ export const WalkInIntake: React.FC<WalkInIntakeProps> = ({ onWalkInAdded }) => 
   };
 
   return (
-    <div className="bg-[#0c1017] rounded-lg p-6 border border-slate-800 font-sans">
-      <div className="flex items-center gap-3 mb-5 pb-3 border-b border-slate-800/80">
-        <div className="w-9 h-9 rounded-md bg-[#00e599]/10 border border-[#00e599]/30 flex items-center justify-center text-[#00e599]">
-          <User className="w-5 h-5" />
-        </div>
-        <div>
-          <h3 className="text-base font-bold text-white">Walk-In Intake</h3>
-          <p className="text-[11px] text-slate-400">Patient Registration & Token Assignment</p>
-        </div>
-      </div>
+    <div className={`rounded-xl p-6 border font-sans transition-colors ${
+      isDark ? 'bg-[#0c1017] border-slate-800 text-white' : 'bg-white border-slate-200 shadow-sm text-slate-900'
+    }`}>
+      <h3 className={`text-base font-bold mb-4 pb-3 border-b ${
+        isDark ? 'border-slate-800 text-white' : 'border-slate-100 text-slate-900'
+      }`}>
+        Patient Walk-In Registration
+      </h3>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Phone Number (10 Digits)</label>
+          <label className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Phone Number</label>
           <div className="relative">
-            <Phone className="absolute left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-500" />
+            <Phone className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               placeholder="e.g. 9876543210"
-              maxLength={10}
               value={phone}
               onChange={handlePhoneChange}
-              className="w-full pl-9 pr-3.5 py-2.5 rounded-md border border-slate-700 bg-[#07090e] text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00e599] font-mono text-xs font-bold"
+              maxLength={10}
+              className={`w-full pl-9 pr-3 py-2 rounded-lg border text-xs font-mono font-bold focus:outline-none focus:border-[#00c985] ${
+                isDark ? 'bg-[#07090e] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+              }`}
               required
             />
           </div>
-        </div>
-
-        <div className="space-y-1">
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Patient Name</label>
-          <input
-            type="text"
-            placeholder="e.g. Rahul Sharma"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-md border border-slate-700 bg-[#07090e] text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00e599] text-xs font-medium"
-            required
-          />
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Age</label>
+            <label className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Patient Name</label>
             <input
-              type="number"
-              placeholder="e.g. 32"
-              min="1"
-              max="120"
-              value={age}
-              onChange={(e) => setAge(e.target.value)}
-              className="w-full px-3.5 py-2.5 rounded-md border border-slate-700 bg-[#07090e] text-white placeholder:text-slate-600 focus:outline-none focus:border-[#00e599] text-xs font-medium"
+              type="text"
+              placeholder="e.g. Rahul Sharma"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={`w-full px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-[#00c985] ${
+                isDark ? 'bg-[#07090e] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+              }`}
               required
             />
           </div>
+
           <div className="space-y-1">
-            <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Department</label>
+            <label className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Age</label>
+            <input
+              type="number"
+              placeholder="e.g. 35"
+              value={age}
+              onChange={(e) => setAge(e.target.value)}
+              className={`w-full px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-[#00c985] ${
+                isDark ? 'bg-[#07090e] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+              }`}
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Department</label>
             <select
               value={specialty}
               onChange={(e) => setSpecialty(e.target.value)}
-              className="w-full px-3 py-2.5 rounded-md border border-slate-700 bg-[#07090e] text-white focus:outline-none focus:border-[#00e599] text-xs font-medium cursor-pointer"
+              className={`w-full px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-[#00c985] cursor-pointer ${
+                isDark ? 'bg-[#07090e] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+              }`}
             >
               {DEPARTMENTS.map((dept) => (
-                <option key={dept} value={dept} className="bg-slate-900">
+                <option key={dept} value={dept}>
                   {dept}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <label className={`text-[11px] font-bold uppercase tracking-wider ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Doctor</label>
+            <select
+              value={assignedDoctor}
+              onChange={(e) => setAssignedDoctor(e.target.value)}
+              className={`w-full px-3 py-2 rounded-lg border text-xs font-medium focus:outline-none focus:border-[#00c985] cursor-pointer ${
+                isDark ? 'bg-[#07090e] border-slate-700 text-white' : 'bg-white border-slate-300 text-slate-900'
+              }`}
+            >
+              <option value="Unassigned">Any Available</option>
+              {DOCTORS.map((doc) => (
+                <option key={doc.id} value={doc.name}>
+                  {doc.name}
                 </option>
               ))}
             </select>
           </div>
         </div>
 
-        <div className="space-y-1">
-          <label className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Assigned Doctor</label>
-          <select
-            value={assignedDoctor}
-            onChange={(e) => setAssignedDoctor(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-md border border-slate-700 bg-[#07090e] text-white focus:outline-none focus:border-[#00e599] text-xs font-medium cursor-pointer"
-          >
-            <option value="Unassigned" className="bg-slate-900">Auto-assign / Unassigned</option>
-            {DOCTORS.map((d) => (
-              <option key={d.id} value={d.name} className="bg-slate-900">
-                {d.name} ({d.specialty})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Priority Emergency Checkbox */}
-        <div className="p-3 rounded-md bg-[#07090e] border border-slate-800 flex items-center justify-between">
+        <div className={`p-3 rounded-lg border flex items-center justify-between cursor-pointer ${
+          priority
+            ? 'bg-red-500/10 border-red-500/30'
+            : isDark ? 'bg-[#07090e] border-slate-800' : 'bg-slate-50 border-slate-200'
+        }`} onClick={() => setPriority(!priority)}>
           <div className="flex items-center gap-2">
-            <Flame className={`w-4 h-4 ${priority ? 'text-red-400' : 'text-amber-400'}`} />
-            <div>
-              <span className="text-xs font-bold text-white">Emergency / Critical Priority</span>
-              <p className="text-[10px] text-slate-400">Place at head of queue for urgent evaluation</p>
-            </div>
+            <Flame className={`w-4 h-4 ${priority ? 'text-red-500' : 'text-slate-400'}`} />
+            <span className={`text-xs font-bold ${priority ? 'text-red-500' : isDark ? 'text-slate-300' : 'text-slate-700'}`}>Emergency / Critical Case</span>
           </div>
           <input
             type="checkbox"
             checked={priority}
             onChange={(e) => setPriority(e.target.checked)}
-            className="w-4 h-4 accent-[#00e599] rounded cursor-pointer"
+            className="w-4 h-4 accent-red-500 cursor-pointer"
           />
         </div>
 
         <button
           type="submit"
-          disabled={!name || phone.length < 10 || isSubmitting}
-          className="w-full py-2.5 mt-2 rounded-md bg-[#00e599] hover:bg-[#00c985] disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-black font-bold text-xs transition-colors cursor-pointer flex justify-center items-center gap-2"
+          disabled={isSubmitting}
+          className="w-full py-2.5 rounded-lg bg-[#009b62] hover:bg-[#008754] text-white font-bold text-xs transition-colors cursor-pointer shadow-sm flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
-            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            <>
+              <RefreshCw className="w-3.5 h-3.5 animate-spin" /> Issuing Token...
+            </>
           ) : (
             <>
-              <PlusCircle className="w-3.5 h-3.5" /> Issue Walk-In Token
+              <PlusCircle className="w-4 h-4" /> Issue Walk-In Token
             </>
           )}
         </button>

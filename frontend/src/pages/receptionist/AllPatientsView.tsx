@@ -2,12 +2,14 @@ import React from 'react';
 import { Users } from 'lucide-react';
 import { QueueItem } from '../../types';
 import { queueService } from '../../services/queueService';
+import { useTheme } from '../../context/ThemeContext';
 
 interface AllPatientsViewProps {
   queue: QueueItem[];
 }
 
 export const AllPatientsView: React.FC<AllPatientsViewProps> = ({ queue }) => {
+  const { isDark } = useTheme();
   const history = queueService.getLocalHistory();
 
   const all = [
@@ -36,58 +38,63 @@ export const AllPatientsView: React.FC<AllPatientsViewProps> = ({ queue }) => {
   ];
 
   return (
-    <div className="bg-[#0c1017] rounded-lg p-6 border border-slate-800 font-sans">
-      <div className="flex items-center gap-3 mb-6 pb-3 border-b border-slate-800/80">
-        <div className="w-9 h-9 rounded-md bg-[#00e599]/10 border border-[#00e599]/30 flex items-center justify-center text-[#00e599]">
+    <div className={`rounded-xl p-6 border font-sans transition-colors ${
+      isDark ? 'bg-[#0c1017] border-slate-800 text-white' : 'bg-white border-slate-200 shadow-sm text-slate-900'
+    }`}>
+      <div className={`flex items-center gap-3 mb-6 pb-3 border-b ${
+        isDark ? 'border-slate-800' : 'border-slate-100'
+      }`}>
+        <div className={`w-9 h-9 rounded-lg border flex items-center justify-center text-[#00c985] ${
+          isDark ? 'bg-[#00e599]/10 border-[#00e599]/30' : 'bg-emerald-50 border-emerald-200'
+        }`}>
           <Users className="w-5 h-5" />
         </div>
         <div>
-          <h3 className="text-base font-bold text-white">All Patients Roster</h3>
-          <p className="text-[11px] text-slate-400">Aggregated Master Record of Live and Past Consultations</p>
+          <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>All Patients Roster</h3>
+          <p className={`text-[11px] ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>Aggregated Master Record of Live and Past Consultations</p>
         </div>
       </div>
 
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
           <thead>
-            <tr className="border-b border-slate-800 text-slate-500 uppercase text-[10px] font-bold tracking-wider">
+            <tr className={`border-b uppercase text-[10px] font-bold tracking-wider ${
+              isDark ? 'border-slate-800 text-slate-500' : 'border-slate-200 text-slate-400'
+            }`}>
               <th className="pb-2.5 pl-2">Patient</th>
               <th className="pb-2.5">Type</th>
               <th className="pb-2.5">Doctor</th>
               <th className="pb-2.5 text-right pr-2">Status</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/60 font-medium">
-            {all.map((p) => (
-              <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
-                <td className="py-3.5 pl-2 font-bold text-white">{p.name}</td>
-                <td className="py-3.5">
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold border ${
-                      p.type === 'Online'
-                        ? 'bg-blue-950/60 text-blue-400 border-blue-500/30'
-                        : 'bg-slate-900 text-slate-300 border-slate-800'
-                    }`}
-                  >
-                    {p.type}
-                  </span>
-                </td>
-                <td className="py-3.5 text-slate-300">{p.doctor_name || 'Unassigned'}</td>
-                <td className="py-3.5 text-right pr-2">
-                  <span
-                    className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold border ${
-                      p.displayStatus === 'Consulted'
-                        ? 'bg-slate-900 text-slate-400 border-slate-800'
-                        : p.displayStatus === 'In Room'
-                        ? 'bg-emerald-950/60 text-[#00e599] border-emerald-500/30'
-                        : 'bg-slate-800 text-white border-slate-700'
-                    }`}
-                  >
-                    {p.displayStatus}
-                  </span>
+          <tbody className={`divide-y font-medium ${isDark ? 'divide-slate-800/60' : 'divide-slate-100'}`}>
+            {all.length === 0 ? (
+              <tr>
+                <td colSpan={4} className={`py-6 text-center text-xs ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                  No patient logs recorded yet.
                 </td>
               </tr>
-            ))}
+            ) : (
+              all.map((item, i) => (
+                <tr key={i} className={`transition-colors ${isDark ? 'hover:bg-slate-800/30' : 'hover:bg-slate-50'}`}>
+                  <td className={`py-3 pl-2 font-bold ${isDark ? 'text-white' : 'text-slate-900'}`}>
+                    {item.name}
+                    <span className={`block font-mono text-[10px] font-normal ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>#{item.id}</span>
+                  </td>
+                  <td className={`py-3 ${isDark ? 'text-slate-300' : 'text-slate-600'}`}>{item.type}</td>
+                  <td className={`py-3 font-semibold ${isDark ? 'text-slate-200' : 'text-slate-800'}`}>{item.doctor_name || 'Unassigned'}</td>
+                  <td className="py-3 text-right pr-2">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                      item.displayStatus === 'Consulted'
+                        ? isDark ? 'bg-slate-900 border-slate-800 text-slate-400' : 'bg-slate-100 border-slate-200 text-slate-600'
+                        : isDark ? 'bg-emerald-500/10 border-emerald-500/30 text-[#00e599]' : 'bg-emerald-50 border-emerald-200 text-[#009b62]'
+                    }`}>
+                      {item.displayStatus}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>

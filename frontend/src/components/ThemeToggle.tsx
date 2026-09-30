@@ -18,7 +18,7 @@ export const ThemeToggle: React.FC<{ className?: string }> = ({ className = '' }
     >
       {isDark ? (
         <>
-          <Sun className="w-3.5 h-3.5 text-amber-400" />
+          <Sun className="w-3.5 h-3.5 text-slate-200" />
           <span className="hidden sm:inline">Light</span>
         </>
       ) : (

@@ -1,4 +1,5 @@
 import { apiRequest } from './api';
+import { realtimeService } from './realtimeService';
 
 export interface Clinic {
   id: string;
@@ -110,6 +111,7 @@ export const appointmentClient = {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    realtimeService.broadcastChange('appointments', 'INSERT', res.data || res);
     return res.data || res;
   },
 
@@ -117,22 +119,16 @@ export const appointmentClient = {
    * Check in an appointment on appointment day -> enters live doctor queue
    */
   async checkIn(appointmentId: string, patientId?: string): Promise<any> {
-    return apiRequest(`/appointments/${appointmentId}/check-in`, {
+    const res = await apiRequest(`/appointments/${appointmentId}/check-in`, {
       method: 'POST',
       body: JSON.stringify({ patient_id: patientId }),
     });
+    realtimeService.broadcastChange('queue_entries', 'INSERT', res.queueEntry || { appointmentId });
+    return res;
   },
 
   /**
-   * Get patient's live queue status across doctors
-   */
-  async getMyQueueStatus(patientIdentifier?: string): Promise<PatientLiveQueueResponse> {
-    const query = patientIdentifier ? `?patient_id=${encodeURIComponent(patientIdentifier)}` : '';
-    return apiRequest(`/queue/my${query}`);
-  },
-
-  /**
-   * Get patient's appointments
+   * Fetch patient's active appointments
    */
   async getMyAppointments(patientIdentifier?: string): Promise<Appointment[]> {
     const query = patientIdentifier ? `?patient_id=${encodeURIComponent(patientIdentifier)}` : '';
@@ -140,23 +136,33 @@ export const appointmentClient = {
   },
 
   /**
-   * Reschedule appointment
+   * Fetch patient's live queue status & deterministic ETA
    */
-  async rescheduleAppointment(id: string, newTime: string): Promise<Appointment> {
-    const res = await apiRequest(`/appointments/${id}/reschedule`, {
-      method: 'PATCH',
-      body: JSON.stringify({ scheduled_at: newTime }),
-    });
-    return res.data || res;
+  async getMyQueueStatus(patientIdentifier?: string): Promise<PatientLiveQueueResponse> {
+    const query = patientIdentifier ? `?patient_id=${encodeURIComponent(patientIdentifier)}` : '';
+    return apiRequest(`/queue/my${query}`);
   },
 
   /**
-   * Cancel appointment
+   * Cancel an appointment
    */
-  async cancelAppointment(id: string): Promise<Appointment> {
-    const res = await apiRequest(`/appointments/${id}/cancel`, {
-      method: 'PATCH',
+  async cancelAppointment(appointmentId: string): Promise<any> {
+    const res = await apiRequest(`/appointments/${appointmentId}/cancel`, {
+      method: 'POST',
     });
-    return res.data || res;
+    realtimeService.broadcastChange('appointments', 'UPDATE', { id: appointmentId, status: 'cancelled' });
+    return res;
+  },
+
+  /**
+   * Reschedule an appointment
+   */
+  async rescheduleAppointment(appointmentId: string, newScheduledAt: string): Promise<any> {
+    const res = await apiRequest(`/appointments/${appointmentId}/reschedule`, {
+      method: 'POST',
+      body: JSON.stringify({ scheduled_at: newScheduledAt }),
+    });
+    realtimeService.broadcastChange('appointments', 'UPDATE', { id: appointmentId, scheduled_at: newScheduledAt });
+    return res;
   },
 };

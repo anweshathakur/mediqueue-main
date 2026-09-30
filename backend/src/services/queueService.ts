@@ -1,5 +1,6 @@
 import { queueRepository, QueueEntryRecord, ConsultationRecord } from "../repositories/queueRepository";
 import { appointmentStore } from "../repositories/appointmentRepository";
+import { etaService } from "./etaService";
 
 export interface QueueItemResponse {
   id: string;
@@ -154,8 +155,7 @@ export class QueueService {
   }
 
   /**
-   * Get patient's live queue status
-   * Returns dynamic position, people ahead, currently seeing, estimated wait, and clinic/doctor details
+   * Get patient's live queue status with deterministic ETA calculation
    */
   async getMyQueueStatus(patientIdentifier?: string) {
     const activeEntries = await queueRepository.getActiveQueueByPatient(patientIdentifier);
@@ -177,25 +177,30 @@ export class QueueService {
     const position = myIndex !== -1 ? myIndex + 1 : 1;
     const peopleAhead = Math.max(0, position - 1);
 
-    // Currently seeing / in-room
-    const consultingPatient =
-      doctorQueue.find((q) => q.status === "consulting") ||
-      doctorQueue.find((q) => q.status === "called");
+    // Active consulting patient
+    const consultingPatient = doctorQueue.find((q) => q.status === "consulting");
 
     const currentlySeeing = consultingPatient
       ? `#${consultingPatient.position} (${consultingPatient.patient.name})`
+      : doctorQueue.find((q) => q.status === "called")
+      ? "Called to Room"
       : "Next in line";
 
-    const avgTimePerPatient = 15;
-    const estimatedWaitMins = peopleAhead * avgTimePerPatient;
-    const estimatedWait = peopleAhead === 0 ? "Ready now" : `~${estimatedWaitMins} min`;
+    // Compute deterministic ETA
+    const etaResult = etaService.calculateEta({
+      doctorId: entry.doctor_id,
+      patientPriority: entry.priority,
+      peopleAhead,
+      activeConsultationStartedAt: consultingPatient?.started_at,
+      avgConsultationMinutes: 12,
+    });
 
     // Doctor details
     const doctor = appointmentStore.doctors.get(entry.doctor_id) || {
       id: entry.doctor_id,
-      name: entry.doctor_name || "Dr. Medical Specialist",
+      name: entry.doctor_name || "Dr. Arjun Mehta",
       specialty: "General Medicine",
-      room_number: "Room 102",
+      room_number: "Room 204",
       clinic_id: entry.clinic_id,
       status: "available" as const,
     };
@@ -203,8 +208,8 @@ export class QueueService {
     // Clinic details
     const clinic = appointmentStore.clinics.get(entry.clinic_id) || {
       id: entry.clinic_id,
-      name: "MediQueue Health Centre",
-      address: "100 Medical Blvd",
+      name: "MUJ Health Centre",
+      address: "100 Medical Blvd, Jaipur, Rajasthan",
       phone: "+91 (555) 019-2834",
     };
 
@@ -215,8 +220,8 @@ export class QueueService {
         position,
         peopleAhead,
         currentlySeeing,
-        estimatedWait,
-        estimatedWaitMins,
+        estimatedWait: etaResult.estimatedWaitFormatted,
+        estimatedWaitMins: etaResult.estimatedWaitMinutes,
         status: entry.status,
         priority: entry.priority,
         joined_at: entry.joined_at,
@@ -226,7 +231,7 @@ export class QueueService {
         id: doctor.id,
         name: doctor.name,
         specialty: doctor.specialty,
-        room_number: doctor.room_number || "Room 102",
+        room_number: doctor.room_number || "Room 204",
       },
       clinic: {
         id: clinic.id,

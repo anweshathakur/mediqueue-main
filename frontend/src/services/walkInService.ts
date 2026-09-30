@@ -1,4 +1,5 @@
 import { apiRequest } from './api';
+import { realtimeService } from './realtimeService';
 
 export interface WalkInPayload {
   name: string;
@@ -48,50 +49,61 @@ export const walkInClient = {
    * Register a new walk-in patient into the queue
    */
   async createWalkIn(payload: WalkInPayload) {
-    return apiRequest('/walk-ins', {
+    const res = await apiRequest('/walk-ins', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
+    realtimeService.broadcastChange('queue_entries', 'INSERT', res.data || payload);
+    return res;
   },
 
   /**
    * Doctor Action: Call patient (waiting -> called)
    */
   async callPatient(queueEntryId: string) {
-    return apiRequest(`/queue/${queueEntryId}/call`, {
+    const res = await apiRequest(`/queue/${queueEntryId}/call`, {
       method: 'POST',
     });
+    realtimeService.broadcastChange('queue_entries', 'UPDATE', { id: queueEntryId, status: 'called' });
+    return res;
   },
 
   /**
    * Doctor Action: Begin consultation (called/waiting -> consulting)
    */
   async startConsultation(queueEntryId: string) {
-    return apiRequest(`/queue/${queueEntryId}/start`, {
+    const res = await apiRequest(`/queue/${queueEntryId}/start`, {
       method: 'POST',
     });
+    realtimeService.broadcastChange('queue_entries', 'UPDATE', { id: queueEntryId, status: 'consulting' });
+    return res;
   },
 
   /**
    * Doctor Action: Complete consultation (consulting -> completed)
    */
   async completeConsultation(queueEntryId: string) {
-    return apiRequest(`/queue/${queueEntryId}/complete`, {
+    const res = await apiRequest(`/queue/${queueEntryId}/complete`, {
       method: 'POST',
     });
+    realtimeService.broadcastChange('queue_entries', 'UPDATE', { id: queueEntryId, status: 'completed' });
+    return res;
   },
 
   async updateStatus(id: string, status: string) {
-    return apiRequest(`/queue/${id}/status`, {
+    const res = await apiRequest(`/queue/${id}/status`, {
       method: 'PATCH',
       body: JSON.stringify({ status }),
     });
+    realtimeService.broadcastChange('queue_entries', 'UPDATE', { id, status });
+    return res;
   },
 
   async deleteWalkIn(id: string) {
-    return apiRequest(`/walkins/${id}`, {
+    const res = await apiRequest(`/walkins/${id}`, {
       method: 'DELETE',
     });
+    realtimeService.broadcastChange('queue_entries', 'DELETE', { id });
+    return res;
   },
 };
-

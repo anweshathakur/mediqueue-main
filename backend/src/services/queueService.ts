@@ -94,13 +94,22 @@ export class QueueService {
     }));
   }
 
-  /**
+    /**
    * Action: Call next patient (waiting -> called)
    */
   async callNextPatient(queueEntryId: string): Promise<QueueEntryRecord> {
+    const entry = await queueRepository.getQueueEntryById(queueEntryId);
+    if (!entry) {
+      throw new Error(`Queue entry ${queueEntryId} not found`);
+    }
+
+    if (entry.status === "completed" || entry.status === "cancelled") {
+      throw new Error(`Cannot call patient with status: ${entry.status}`);
+    }
+
     const updated = await queueRepository.updateStatus(queueEntryId, "called", "called_at");
     try {
-      await notificationService.notifyPatientCalled({
+      await notificationService.notifyCalled({
         id: updated.id,
         patient_id: updated.patient_id,
         doctor_name: updated.doctor_name || "Dr. Arjun Mehta",
@@ -122,6 +131,10 @@ export class QueueService {
       throw new Error(`Queue entry ${queueEntryId} not found`);
     }
 
+    if (entry.status === "completed" || entry.status === "cancelled") {
+      throw new Error(`Cannot start consultation for an entry with status: ${entry.status}`);
+    }
+
     const started_at = new Date().toISOString();
     const updatedQueueEntry = await queueRepository.updateStatus(queueEntryId, "consulting", "started_at");
 
@@ -140,11 +153,25 @@ export class QueueService {
 
   /**
    * Action: Complete consultation (consulting -> completed)
+   * State machine: rejects direct skipping from waiting to completed
    */
   async completeConsultation(queueEntryId: string): Promise<{
     queueEntry: QueueEntryRecord;
     consultation: ConsultationRecord | null;
   }> {
+    const entry = await queueRepository.getQueueEntryById(queueEntryId);
+    if (!entry) {
+      throw new Error(`Queue entry ${queueEntryId} not found`);
+    }
+
+    if (entry.status === "waiting") {
+      throw new Error("Invalid state transition: Cannot complete consultation directly from status: waiting. Expected lifecycle: waiting -> called -> consulting -> completed.");
+    }
+
+    if (entry.status === "completed") {
+      throw new Error("Consultation is already completed.");
+    }
+
     const completed_at = new Date().toISOString();
 
     const updatedQueueEntry = await queueRepository.updateStatus(
@@ -159,7 +186,7 @@ export class QueueService {
     );
 
     try {
-      await notificationService.notifyConsultationCompleted({
+      await notificationService.notifyCompleted({
         id: updatedQueueEntry.id,
         patient_id: updatedQueueEntry.patient_id,
         doctor_name: updatedQueueEntry.doctor_name || "Dr. Arjun Mehta",
@@ -171,6 +198,7 @@ export class QueueService {
       consultation,
     };
   }
+
 
   /**
    * Get patient's live queue status with deterministic ETA calculation

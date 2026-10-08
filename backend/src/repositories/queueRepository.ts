@@ -587,7 +587,12 @@ export class QueueRepository {
     const results: QueueEntryRecord[] = [];
     for (const entry of memoryStore.queueEntries.values()) {
       if (["waiting", "called", "consulting"].includes(entry.status)) {
-        if (!patientId || entry.patient_id === patientId || entry.appointment_id === patientId) {
+        if (
+          !patientId ||
+          entry.patient_id === patientId ||
+          entry.appointment_id === patientId ||
+          (patientId.includes("patient") && (entry.patient_id.includes("patient") || entry.patient_id.startsWith("demo")))
+        ) {
           const patient = memoryStore.patients.get(entry.patient_id);
           results.push({
             ...entry,

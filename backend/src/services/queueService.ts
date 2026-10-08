@@ -268,13 +268,14 @@ export class QueueService {
       ? "Called to Room"
       : "Next in line";
 
-    // Compute deterministic ETA
-    const etaResult = etaService.calculateEta({
+    // Compute dynamic ETA (ML Service with deterministic fallback)
+    const etaResult = await etaService.calculateEta({
       doctorId: entry.doctor_id,
       patientPriority: entry.priority,
       peopleAhead,
       activeConsultationStartedAt: consultingPatient?.started_at,
       avgConsultationMinutes: 12,
+      isAppointment: Boolean(entry.appointment_id),
     });
 
     // Doctor details

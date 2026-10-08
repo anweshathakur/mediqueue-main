@@ -115,7 +115,7 @@ export class QueueController {
 
   async getMyQueueStatus(req: Request, res: Response) {
     try {
-      const authenticatedUserIdentifier = req.user?.email || req.user?.id || "demo123@gmail.com";
+      const authenticatedUserIdentifier = req.user?.id || req.user?.email || "demo-patient-101";
       const status = await queueService.getMyQueueStatus(authenticatedUserIdentifier);
       return res.status(200).json(status);
     } catch (error) {

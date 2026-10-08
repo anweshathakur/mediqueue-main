@@ -4,7 +4,6 @@
 
 <p align="center">
 
-![Status](https://img.shields.io/badge/Status-In%20Development-22c55e)
 ![Frontend](https://img.shields.io/badge/Frontend-React%20%2B%20TypeScript-61DAFB)
 ![Backend](https://img.shields.io/badge/Backend-Node.js%20%2B%20Express-339933)
 ![Database](https://img.shields.io/badge/Database-PostgreSQL-336791)

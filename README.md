@@ -27,7 +27,7 @@ Instead of treating appointments as fixed time slots, MediQueue continuously tra
 
 ---
 
-## ✨ What MediQueue Does
+##  What MediQueue Does
 
 ### 👤 Patient Portal
 
@@ -86,9 +86,6 @@ MediQueue treats the clinic as a **live system**, rather than a static appointme
                     ┌─────────────────┐
                     │   Patient ETA   │
                     └─────────────────┘
-````
-
-The queue dynamically reflects what is actually happening inside the clinic.
 
 ---
 
@@ -303,9 +300,6 @@ VITE_SUPABASE_URL=your_supabase_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 ```
 
-> Never commit `.env` files or private/service-role keys.
-
----
 
 <p align="center">
 

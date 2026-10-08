@@ -1,3 +1,4 @@
+import { auditService } from "./auditService";
 import { queueRepository, QueueEntryRecord, ConsultationRecord } from "../repositories/queueRepository";
 import { appointmentStore } from "../repositories/appointmentRepository";
 import { etaService } from "./etaService";
@@ -108,6 +109,13 @@ export class QueueService {
     }
 
     const updated = await queueRepository.updateStatus(queueEntryId, "called", "called_at");
+    auditService.log({
+      clinicId: entry.clinic_id,
+      action: "QUEUE_CALLED",
+      resourceType: "queue_entry",
+      resourceId: queueEntryId,
+      metadata: { doctor_id: entry.doctor_id, old_status: entry.status, new_status: "called" },
+    });
     try {
       await notificationService.notifyCalled({
         id: updated.id,
@@ -137,6 +145,20 @@ export class QueueService {
 
     const started_at = new Date().toISOString();
     const updatedQueueEntry = await queueRepository.updateStatus(queueEntryId, "consulting", "started_at");
+    auditService.log({
+      clinicId: entry.clinic_id,
+      action: "QUEUE_STARTED",
+      resourceType: "queue_entry",
+      resourceId: queueEntryId,
+      metadata: { doctor_id: entry.doctor_id, old_status: entry.status, new_status: "consulting" },
+    });
+    auditService.log({
+      clinicId: entry.clinic_id,
+      action: "CONSULTATION_STARTED",
+      resourceType: "consultation",
+      resourceId: queueEntryId,
+      metadata: { doctor_id: entry.doctor_id, patient_id: entry.patient_id },
+    });
 
     const consultation = await queueRepository.createConsultation({
       queue_entry_id: queueEntryId,
@@ -179,6 +201,20 @@ export class QueueService {
       "completed",
       "completed_at"
     );
+    auditService.log({
+      clinicId: entry.clinic_id,
+      action: "QUEUE_COMPLETED",
+      resourceType: "queue_entry",
+      resourceId: queueEntryId,
+      metadata: { doctor_id: entry.doctor_id, old_status: entry.status, new_status: "completed" },
+    });
+    auditService.log({
+      clinicId: entry.clinic_id,
+      action: "CONSULTATION_COMPLETED",
+      resourceType: "consultation",
+      resourceId: queueEntryId,
+      metadata: { doctor_id: entry.doctor_id, patient_id: entry.patient_id },
+    });
 
     const consultation = await queueRepository.completeConsultation(
       queueEntryId,

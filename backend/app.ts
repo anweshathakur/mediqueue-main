@@ -1,3 +1,4 @@
+import auditRoutes from "./src/routes/auditRoutes";
 import dotenv from "dotenv";
 dotenv.config();
 
@@ -101,10 +102,12 @@ app.get("/test-db", async (req, res, next) => {
 
 // 6. Application Routes (with sensitive limiter on mutations)
 app.use("/api/queue", queueRoutes);
+app.use("/api/walk-in", sensitiveActionLimiter, walkInRoutes);
 app.use("/api/walk-ins", sensitiveActionLimiter, walkInRoutes);
 app.use("/api/walkins", sensitiveActionLimiter, walkInRoutes);
 app.use("/api/appointments", sensitiveActionLimiter, appointmentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/audit-logs", auditRoutes);
 app.get("/api/clinics", (req, res) => appointmentController.getClinics(req, res));
 app.get("/api/doctors", (req, res) => appointmentController.getDoctors(req, res));
 app.use("/api", apiRouter);

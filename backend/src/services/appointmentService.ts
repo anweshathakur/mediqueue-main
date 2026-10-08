@@ -1,3 +1,4 @@
+import { auditService } from "./auditService";
 import {
   appointmentRepository,
   ClinicRecord,
@@ -29,7 +30,7 @@ export class AppointmentService {
       throw new Error("clinic_id, doctor_id, and scheduled_at are required to book an appointment");
     }
 
-    return appointmentRepository.createAppointment({
+    const created = await appointmentRepository.createAppointment({
       clinic_id: data.clinic_id,
       patient_id: data.patient_id || "patient-anon",
       doctor_id: data.doctor_id,
@@ -38,6 +39,15 @@ export class AppointmentService {
       patient_name: data.patient_name,
       patient_phone: data.patient_phone,
     });
+    auditService.log({
+      clinicId: data.clinic_id,
+      userId: data.patient_id,
+      action: "APPOINTMENT_CREATED",
+      resourceType: "appointment",
+      resourceId: created.id,
+      metadata: { doctor_id: data.doctor_id, scheduled_at: data.scheduled_at },
+    });
+    return created;
   }
 
   async getMyAppointments(patientIdentifier?: string): Promise<AppointmentRecord[]> {
@@ -104,6 +114,22 @@ export class AppointmentService {
 
     // Update appointment status to checked_in
     const updatedAppointment = await appointmentRepository.updateStatus(appointmentId, "checked_in");
+    auditService.log({
+      clinicId: appointment.clinic_id,
+      userId: appointment.patient_id,
+      action: "APPOINTMENT_CHECKED_IN",
+      resourceType: "appointment",
+      resourceId: appointmentId,
+      metadata: { queue_entry_id: queueEntry.id, doctor_id: appointment.doctor_id },
+    });
+    auditService.log({
+      clinicId: appointment.clinic_id,
+      userId: appointment.patient_id,
+      action: "QUEUE_ENTRY_CREATED",
+      resourceType: "queue_entry",
+      resourceId: queueEntry.id,
+      metadata: { appointment_id: appointmentId, doctor_id: appointment.doctor_id, priority: queueEntry.priority },
+    });
 
     return {
       message: "Checked in successfully. Added to doctor queue.",
